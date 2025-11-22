@@ -3,11 +3,9 @@ V3.0.0
       Why did I do this?
 
 V2.0.0  
-      A small function using fc something like:
+      A small function using fc similar to this:
       h() {
-          # Get the last command from history
-          last_cmd=$(fc -ln -1)
-    
+          last_cmd=$(fc -ln -1 | awk '{print $1}'
           # Run the last command with --help appended
           eval "$last_cmd --help"
       }

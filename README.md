@@ -67,7 +67,7 @@ V3.0.0
       along with 'help <command>' for builtins and some keywords
       as a fallback, it checks if a man page exists and alerts the user.
       For aliases, functions and scripts - handle displaying contents.
-      Then feature creep got away from me and Now I have this 1200+ line mess in BASH
-      Plus! the parser, and pipeline handling are vibe coded, (chatgpt sucks)
+      Then feature creep got away from me and Now I have this 1200+ line mess in BASH.
+      Plus! it's 2025, so the parser, and pipeline handling are vibe coded! (chatgpt sucks)
       this is just a side project for me, not sure if it will ever work right,
       but someone might find this useful and decide to fork it.

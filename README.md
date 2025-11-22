@@ -6,7 +6,7 @@ h is a deep-introspection utility for Bash.
 Instead of relying on multiple tools (type, which, command -V, compgen, alias, etc.),
 h unifies all resolution logic into a single command analysis engine.
 
-It recursively expands aliases, functions, builtins, binaries, scripts, pipelines, lists, and wrappers — producing a clean, readable, syntax-highlighted explanation of what Bash will actually run.
+It Detects aliases, functions, builtins, keywords, binaries, scripts, pipelines, chained commands, and wrappers — producing a clean, readable, explanation of what Bash will actually run.
 
 Designed for:
 learners exploring shell internals
@@ -17,17 +17,7 @@ developers maintaining complex shell environments
 🚀 Overview
 Modern shells resolve commands through a layered chain:
 Alias → Function → Builtin → File in $PATH → Script / Interpreter → ELF Binary
-h tries to walk this chain recursively, determining the true implementation of any command — including nested components in pipelines, functions, and aliases.
-
-It shows:
-what Bash actually executes
-where it lives
-whether it's shadowed or overridden
-whether it's a script or ELF binary
-permissions, capabilities, shebangs
-which package installed it
-definitions, file origins, previews, and more
-All in a clear, syntax-highlighted display.
+h tries to walk this chain recursively, determining the true implementation of any command — including nested components in pipelines, chains, and aliases.
 
 ✨ Key Features
 🔍 Command Resolution
@@ -50,9 +40,8 @@ Identifies $PATH ordering issues
 🔁 Recursive Analysis
 Supports recursion into:
 pipelines (cmd1 | cmd2)
-command lists (cmd1 && cmd2, cmd1; cmd2)
+command chains (cmd1 && cmd2, cmd1; cmd2)
 alias expansions
-functions containing additional commands
 Depth-limited to avoid infinite loops.
 
 📜 Alias Introspection
@@ -65,7 +54,7 @@ shadowing warnings
 📜 Function Introspection
 h extracts:
 full function definition
-file & line number
+file & line number (when available)
 syntax-highlighted preview
 
 📜 Script Introspection
@@ -73,7 +62,7 @@ For scripts, h identifies:
 shebang interpreter
 interpreter path
 real file location (follows symlinks)
-script preview
+syntax-highlighted preview
 Supports:
 bash, sh, python, perl, ruby, node, awk, sed, and any #! file.
 

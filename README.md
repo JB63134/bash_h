@@ -4,7 +4,8 @@ h - a buggy BASH Command Analyzer
 Installation -- source .bash_h into the enviroment
 
 h is a shell command introspection tool that tells you what a command really is, where
-it comes from, how it resolves, what scripts or binaries it points to, and what metadata is associated with it.
+it comes from, how it resolves, what scripts or binaries it points to, and what metadata is associated with it. 
+Along with trying to provide any relevent --help info or letting the user know if a man page exists.
 
 🚀 Overview
 Modern shells resolve commands through a complex chain: - aliases - functions - builtins - PATH binaries -

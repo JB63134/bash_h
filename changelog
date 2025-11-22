@@ -5,7 +5,7 @@ V3.0.0
 V2.0.0  
       A small function using fc similar to this:
       h() {
-          last_cmd=$(fc -ln -1 | awk '{print $1}'
+          last_cmd=$(fc -ln -1 | awk '{print $1}')
           # Run the last command with --help appended
           eval "$last_cmd --help"
       }

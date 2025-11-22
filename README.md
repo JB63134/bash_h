@@ -1,141 +1,218 @@
-bash_h
-h - a buggy BASH Command Analyzer
+📦 h — A Buggy (But Ambitious) Bash Command Analyzer
 
-h is a shell command introspection tool that tells you what a command really is, 
-Instead of relying on multiple tools (type, which, command -V, compgen, alias, etc.), 
-the h function unifies all resolution logic and recursively analyzes commands, pipelines, 
-functions, aliases, builtins, binaries, scripts, shebangs, permissions, shadowing, 
-PATH issues, and more.
+A shell-command introspection tool that tells you what a command really is.
 
-It is intended for anyone who might find it useful:
-Learners exploring Bash internals (like me)
-Sysadmins & DevOps engineers 
-Security auditors 
-Developers maintaining complex shell environments  
+h is a deep-introspection utility for Bash.
+Instead of relying on multiple tools (type, which, command -V, compgen, alias, etc.),
+h unifies all resolution logic into a single command analysis engine.
 
-🚀 Overview 
-Modern shells resolve commands through a complex chain: 
-Aliases - functions - builtins - PATH binaries - shell wrappers ( sudo , command , builtin , etc.) 
-h tries to walk this entire chain recursively, expanding each component and showing: 
-The real implementation of the command 
-Where it lives 
-Whether it is shadowed or overridden 
-Whether it is a script or ELF binary 
-Whether it requires root or has capabilities 
-Which package it came from 
-Any subcommands/functions being called All displayed in a clean, readable, syntax‑highlighted format.
+It recursively expands aliases, functions, builtins, binaries, scripts, pipelines, lists, and wrappers — producing a clean, readable, syntax-highlighted explanation of what Bash will actually run.
 
-✨ Key Features 
+Designed for:
 
+learners exploring shell internals
+
+sysadmins & DevOps engineers
+
+security auditors
+
+developers maintaining complex shell environments
+
+⚠️ Note: This project is experimental. The author calls it “buggy.”
+Contributions, issues, and PRs are welcome.
+
+🚀 Overview
+
+Modern shells resolve commands through a layered chain:
+
+Alias → Function → Builtin → File in $PATH → Script / Interpreter → ELF Binary
+
+
+h tries to walk this chain recursively, determining the true implementation of any command — including nested components in pipelines, functions, and aliases.
+
+It shows:
+
+what Bash actually executes
+
+where it lives
+
+whether it's shadowed or overridden
+
+whether it's a script or ELF binary
+
+permissions, capabilities, shebangs
+
+which package installed it
+
+definitions, file origins, previews, and more
+
+All in a clear, syntax-highlighted display.
+
+✨ Key Features
 🔍 Command Resolution
-For any given input, h determines exactly what Bash would execute: 
-Alias - Function - Builtin - Keyword - Binary (with full path) - Shell script or interpreted script - Symlink chain resolution
-builtin vs external detection
-highlighting of overrides/shadowing
+
+For any given input, h identifies:
+
+aliases
+
+functions
+
+builtins
+
+keywords
+
+external binaries
+
+symlinks / wrapper scripts
+
+interpreted scripts
+
+shadowing / overrides
+
+exact file Bash will execute
 
 🧭 PATH Inspection
-• Shows the exact file found by Bash
-• Warns about shadowed commands (e.g., local ls hiding /bin/ls)
-• Can highlight PATH misconfigurations
 
-🔁 Recursive Analysis     *** need help here *** my recursive logic for aliases is messed up... 
-If the command contains: 
-Pipelines (cmd1 | cmd2)  
-Lists (cmd1 && cmd2, cmd1; cmd2) 
-Aliases expanding into other commands 
-Functions containing additional commands
-h tries to recursively analyzes each component.
-depth‑limited to avoid infinite cycles
+Displays the full resolved path
 
-📜 Alias Introspection If a command resolves to an alias, h extracts: 
-alias definition,
-real file location and line number
+Warns about shadowed commands
 
-📜 Function Introspection If a command resolves to a function, h extracts: 
-function definition,
-real file location and line number
-syntax-highlighted preview of the function 
+Identifies $PATH ordering issues
 
-📜 Script Introspection If a command resolves to a script, h extracts: 
-Shebang type 
-Interpreter path 
-real file location (following symlinks) 
-syntax-highlighted preview of the script 
-Supports: Bash - POSIX sh - Python - Perl - Ruby - Node / JS - Awk - Sed
-And any executable text file with a #!
+🔁 Recursive Analysis
 
-📜 Builtin Introspection If a command resolves to a Builtin, h extracts: 
-Whether the builtin is enabled
-if the builtin is overriden by an executable
-and shows help for the builtin 
+(This is currently being improved — alias recursion is known to be buggy.)
 
-⚙️ ELF Binary Analysis If a command is an ELF binary, h shows: 
-Architecture 
-Whether it’s dynamically or statically linked 
-Interpreter ( ld-linux ) path 
-Capabilities ( cap_* ) 
-SUID/SGID flags 
-Owner + permissions 
-Real path after resolving symlinks
-and shows help for the elf 
+Supports recursion into:
 
-📦 Package Lookup For binaries installed by system packages: 
-Debian/Ubuntu: dpkg -S 
-h prints the package name, file ownership, and version info when possible.
+pipelines (cmd1 | cmd2)
 
-🛠️ Usage Simple: 
-h <command>        analyzes the command 
-h                  analyzes the last command ran using fc for history 
-Examples: 
-h grep 
-h "sudo ls | awk '{print $1}'" 
-h .. 
+command lists (cmd1 && cmd2, cmd1; cmd2)
+
+alias expansions
+
+functions containing additional commands
+
+Depth-limited to avoid infinite loops.
+
+📜 Alias Introspection
+
+If a command resolves to an alias, h shows:
+
+alias definition
+
+source file & line number (when available)
+
+recursive expansion
+
+shadowing warnings
+
+📜 Function Introspection
+
+h extracts:
+
+full function definition
+
+file & line number
+
+syntax-highlighted preview
+
+📜 Script Introspection
+
+For scripts, h identifies:
+
+shebang interpreter
+
+interpreter path
+
+real file location (follows symlinks)
+
+script preview
+
+Supports:
+bash, sh, python, perl, ruby, node, awk, sed, and any #! file.
+
+📜 Builtin Introspection
+
+Shows:
+
+whether the builtin is enabled
+
+whether it is shadowed
+
+builtin help text
+
+⚙️ ELF Binary Analysis
+
+Displays:
+
+architecture
+
+dynamic vs static linking
+
+ELF interpreter (ld-linux)
+
+capabilities
+
+SUID/SGID bits
+
+owner & permissions
+
+resolved real path
+
+binary help output
+
+📦 Package Lookup
+
+On Debian/Ubuntu systems:
+
+uses dpkg -S
+
+prints package name, version, and file ownership
+
+🛠️ Usage
+Basic:
+h <command>
+
+Analyze last executed command:
 h
-You can also feed history references: 
-h !! 
+
+Analyze history references:
+h !!
 h !42
 
-🧪 Use Cases 
-• Understanding what actually runs when you type a command 
-• Detecting command shadowing (alias vs function vs binary) 
-• Auditing scripts and wrappers in a toolchain 
-• Debugging PATH problems 
-• Verifying SUID or capability-based privilege escalation 
-• Teaching shell behavior to new engineers
+Examples:
+h grep
+h "sudo ls | awk '{print $1}'"
+h ..
 
-Tips
-    • Use h when a command behaves “wrong” or unexpectedly
-    • Use it to debug $PATH ordering issues
-    • Use it when aliases or functions interfere with global commands
-    • Use it to audit your environment for dangerous executables in writable directories
-    • Or use it to just get help for a command
+🧪 Use Cases
 
+Understand what actually runs when you type a command
 
+Detect command shadowing (alias → function → binary)
 
+Audit scripts and wrappers in toolchains
 
+Debug $PATH problems
 
+Identify SUID / capability-based escalation paths
 
+Teach Bash command resolution to new engineers
 
+Inspect environment for dangerous executables in writable dirs
 
+💡 Tips
 
+Use h when a command behaves unexpectedly
 
+Use it to debug PATH issues or command conflicts
 
+Use it when aliases or functions override global tools
 
+Use it to audit your environment for security problems
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+Or simply use it to explore Bash internals
 
 
 

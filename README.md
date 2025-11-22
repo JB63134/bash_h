@@ -27,14 +27,20 @@ A shell-command introspection tool that tells you what a command really is. Inst
 
 📦 Package Lookup On Debian/Ubuntu systems: uses dpkg and apt to display the package name, version,  maintainer info, and package description.
 
+Installation: Source bash_h.sh 
+ 
 🛠️ Usage Basic:
-h  
+h without an argument uses history to lookup the last command ran.
+h <command> gives you info about a specific command.
+Examples: 
+h grep  
+h which
+h awk
+h then
 Analyze history references: 
 h !! 
 h !42 
-Examples: 
-h grep  
-h ..
+
 
 🧪 Use Cases Understand what actually runs when you type a command. Detect command shadowing (alias → function → binary). Audit scripts and wrappers in toolchains. Debug $PATH problems. Identify SUID / capability-based escalation paths.
 
@@ -47,6 +53,7 @@ But thats all a bunch of crap, this is really an over ambitious help tool:
 V1.0.0 was a small alias: alias h='eval "$(history -p \!\! | awk '\''{print $1}'\'')" --help'
 
 V2.0.0 was a small function using fc similar to this:
+
       h() {
           last_cmd=$(fc -ln -1 | awk '{print $1}')
           # Run the last command with --help appended

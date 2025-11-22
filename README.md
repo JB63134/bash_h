@@ -7,9 +7,23 @@ the h function unifies all resolution logic and recursively analyzes commands, p
 functions, aliases, builtins, binaries, scripts, shebangs, permissions, shadowing, 
 PATH issues, and more.
 
-It is intended for: - Sysadmins & DevOps engineers - Security auditors - Developers maintaining complex shell environments - Learners exploring Bash internals
+It is intended for anyone who might find it useful:
+Learners exploring Bash internals (like me)
+Sysadmins & DevOps engineers 
+Security auditors 
+Developers maintaining complex shell environments  
 
-🚀 Overview Modern shells resolve commands through a complex chain: - aliases - functions - builtins - PATH binaries - shell wrappers ( sudo , command , builtin , etc.) h tries to walk this entire chain recursively, expanding each component and showing: - the real implementation of the command - where it lives - whether it is shadowed or overridden - whether it is a script or ELF binary - whether it requires root or has capabilities - which package it came from - any subcommands/functions being called All displayed in a clean, readable, syntax‑highlighted format.
+🚀 Overview 
+Modern shells resolve commands through a complex chain: 
+Aliases - functions - builtins - PATH binaries - shell wrappers ( sudo , command , builtin , etc.) 
+h tries to walk this entire chain recursively, expanding each component and showing: 
+The real implementation of the command 
+Where it lives 
+Whether it is shadowed or overridden 
+Whether it is a script or ELF binary 
+Whether it requires root or has capabilities 
+Which package it came from 
+Any subcommands/functions being called All displayed in a clean, readable, syntax‑highlighted format.
 
 ✨ Key Features 
 

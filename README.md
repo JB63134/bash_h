@@ -1,8 +1,6 @@
 # bash_h
 h - a buggy BASH Command Analyzer
 
-Installation -- source .bash_h into the enviroment
-
 h is a shell command introspection tool that tells you what a command really is, where
 it comes from, how it resolves, what scripts or binaries it points to, and what metadata is associated with it. 
 Along with trying to provide any relevent --help info or letting the user know if a man page exists.
@@ -82,3 +80,6 @@ path resolution
 • Debugging PATH problems
 • Verifying SUID or capability-based privilege escalation
 • Teaching shell behavior to new engineers
+
+🧩 Installation 
+source .bash_h into the enviroment

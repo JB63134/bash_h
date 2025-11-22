@@ -15,21 +15,24 @@ being called
 All displayed in a clean, readable, syntax‑highlighted format.
 
 ✨ Key Features
-🔍 Unified Command Introspection
-Run:
-h ls
-and immediately see: - alias expansion (with history resolution) - function definitions (with source file + line
-numbers) - builtin vs external detection - full search path lookup - highlighting of overrides/shadowing
+alias expansion (with history resolution)
+function definitions (with source file + line numbers)  
+builtin vs external detection  
+full search path lookup  
+highlighting of overrides/shadowing
 
-🧩 Recursive Analysis
+🧩 Recursive Analysis  *** need help here ***  my recursive logic for aliases is messed up... 
 Commands like:
 h sudo command builtin type ls | grep txt
-are resolved component by component: - splits pipelines / chains safely - follows aliases → functions →
-scripts → binaries - traces wrappers ( sudo , env , nice , etc.) - depth‑limited to avoid infinite cycles
+are resolved component by component: 
+splits pipelines / chains safely 
+follows aliases → functions → scripts → binaries  
+traces wrappers (sudo , builtin, command, etc.)  
+depth‑limited to avoid infinite cycles
 
 1📜 Script Introspection
 If a command resolves to a script, h extracts: - shebang type - interpreter path - real file location (following
-symlinks) - syntax-highlighted preview of first few lines
+symlinks) - syntax-highlighted preview of the script
 Supports: - Bash - POSIX sh - Python - Perl - Ruby - Node / JS - Awk - Sed - And any executable text file with a
 #!
 
@@ -41,11 +44,6 @@ after resolving symlinks
 📦 Package Lookup
 For binaries installed by system packages: - Debian/Ubuntu: dpkg -S 
 h prints the package name, file ownership, and version info when possible.
-
-🎨 Readable, Styled Output
-Output uses: - color-coded sections - bold/italic classification - visual indicators for wrappers, pipes,
-recursion depth - indentation for nested expansions
-Everything is optimized for troubleshooting and learning.
 
 🛠️ Usage
 Simple:
@@ -69,9 +67,9 @@ h !42
 7. Prints structured results with color and indentation.
 
 ✨ Dependencies
-Minimal: - Bash 5.0+ - Standard Unix tools: type , command , file , grep , awk , sed - Optional: -
-dpkg (Debian/Ubuntu package metadata) - getcap / setcap (capabilities) - readlink -f for robust
-path resolution
+Minimal: Bash 5.0+  
+Nessecary Unix tools: type , command , file , grep , awk , sed 
+Optional tools: dpkg (Debian/Ubuntu package metadata), getcap / setcap (capabilities), readlink -f for robust path resolution
 
 🧪 Use Cases
 • Understanding what actually runs when you type a command

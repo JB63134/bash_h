@@ -3,7 +3,7 @@ V3.0.0
       Why did I do this?
 
 V2.0.0  
-      A small function using fc
+      A small function using fc something like:
       h() {
           # Get the last command from history
           last_cmd=$(fc -ln -1)
@@ -14,4 +14,4 @@ V2.0.0
 
 V1.0.0
       Simply an alias
-      alias h='eval "!! --help"
+      alias h='eval "$(history -p \!\! | awk '\''{print $1}'\'')" --help'

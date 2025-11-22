@@ -27,7 +27,7 @@ A shell-command introspection tool that tells you what a command really is. Inst
 
 📦 Package Lookup On Debian/Ubuntu systems: uses dpkg and apt to display the package name, version,  maintainer info, and package description.
 
-Installation: Source bash_h.sh 
+🛠️ Installation: Source bash_h.sh 
  
 🛠️ Usage Basic: 
 
@@ -47,7 +47,7 @@ Installation: Source bash_h.sh
 
 💡 Tips Use h when a command behaves unexpectedly. Use it to debug PATH issues or command conflicts. Use it when aliases or functions override global tools. Use it to audit your environment for security problems Or simply use it to explore Bash internals
 
-
+------------------------------------------------------------------------------------------------------------------
 
 But thats all a bunch of crap, this is really an over ambitious help tool: 
 

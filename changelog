@@ -1,0 +1,16 @@
+V3.0.0
+      Now we have this 1200+ line mess in BASH
+
+V2.0.0  
+      A small function using fc
+      h() {
+          # Get the last command from history
+          last_cmd=$(fc -ln -1)
+    
+          # Run the last command with --help appended
+          eval "$last_cmd --help"
+      }
+
+V1.0.0
+      Simply an alias
+      alias h='eval "!! --help"

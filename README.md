@@ -5,6 +5,9 @@ h is a shell command introspection tool that tells you what a command really is,
 it comes from, how it resolves, what scripts or binaries it points to, and what metadata is associated with it. 
 Along with trying to provide any relevent --help info or letting the user know if a man page exists.
 
+🧩 Installation 
+source .bash_h into the enviroment
+
 🚀 Overview
 Modern shells resolve commands through a complex chain: - aliases - functions - builtins - PATH binaries -
 shell wrappers ( sudo , command , builtin , etc.)
@@ -78,6 +81,3 @@ Optional tools: dpkg (Debian/Ubuntu package metadata), getcap / setcap (capabili
 • Debugging PATH problems
 • Verifying SUID or capability-based privilege escalation
 • Teaching shell behavior to new engineers
-
-🧩 Installation 
-source .bash_h into the enviroment

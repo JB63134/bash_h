@@ -5,7 +5,7 @@ h is a deep-introspection utility for Bash.
 
 A shell-command introspection tool that tells you what a command really is. Instead of relying on multiple tools (type, which, command -V, compgen, alias, etc.), h unifies all resolution logic into a single command analysis engine.
 
-🚀 Overview Modern shells resolve commands through a layered chain: Alias → Function → Builtin → File in $PATH → Script / Interpreter → ELF Binary h tries to walk this chain recursively, determining the true implementation of any command while providing relevent information and any available help.
+🚀 Overview: Modern shells resolve commands through a layered chain: Alias → Function → Builtin → File in $PATH → Script / Interpreter → ELF Binary.  h tries to walk this chain recursively, determining the true implementation of any command while providing relevent information and any available help.
 
 ✨ Key Features 
 

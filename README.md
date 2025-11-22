@@ -6,7 +6,7 @@ it comes from, how it resolves, what scripts or binaries it points to, and what 
 Along with trying to provide any relevent --help info or letting the user know if a man page exists.
 
 🧩 Installation 
-source .bash_h into the enviroment
+source bash_h into the enviroment
 
 🚀 Overview
 Modern shells resolve commands through a complex chain: - aliases - functions - builtins - PATH binaries -

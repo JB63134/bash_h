@@ -29,17 +29,18 @@ A shell-command introspection tool that tells you what a command really is. Inst
 
 Installation: Source bash_h.sh 
  
-🛠️ Usage Basic:
-h without an argument uses history to lookup the last command ran.
-h <command> gives you info about a specific command.
-Examples: 
-h grep  
-h which
-h awk
-h then
-Analyze history references: 
-h !! 
-h !42 
+🛠️ Usage Basic: 
+
+     h without an argument uses history to lookup the last command ran.
+     h <command> gives you info about a specific command.
+     Examples: 
+     h grep  
+     h which
+     h awk
+     h then
+     Analyze history references: 
+     h !! 
+     h !42 
 
 
 🧪 Use Cases Understand what actually runs when you type a command. Detect command shadowing (alias → function → binary). Audit scripts and wrappers in toolchains. Debug $PATH problems. Identify SUID / capability-based escalation paths.

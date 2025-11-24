@@ -16,11 +16,9 @@ declare -g suppress_builtin_msg=1   # suppress repeated builtin help
 complete -F _h_completion h
 
 h() {
-
     # -------------------------
     # Set path for system commands to be included 
     # -------------------------
-
     trap 'PATH="$OLD_PATH"' RETURN
 
     local admin_dirs=(
@@ -69,6 +67,7 @@ h() {
         GREEN=$(tput setaf 2)
         CYAN=$(tput setaf 6)
         YELLOW=$(tput setaf 11)
+        BPURP=$(tput setaf 13)
         RESET=$(tput sgr0)
     else
         # Fallback: ANSI escape sequences
@@ -76,6 +75,7 @@ h() {
         GREEN='\033[32m'
         CYAN='\033[36m'
         YELLOW='\033[93m'
+        BPURP='\033[95m'
         RESET='\033[0m'
 
         # Verify terminal supports ANSI colors
@@ -84,7 +84,7 @@ h() {
             :
         else
             # non-interactive — disable colors
-            RED=""; GREEN=""; CYAN=""; YELLOW=""; RESET=""
+            RED=""; GREEN=""; CYAN=""; YELLOW=""; BPURP=''; RESET=""
         fi
     fi
 
@@ -134,8 +134,7 @@ h() {
         -h|--help) _h-usage; return 0;;
         -v|--version) _h-ver; return 0;;
         -s|--sourced) _sourced_files; return 0;;
-        -a|--alias) printf "\n" && _alias_override; return 0;;
-        -f|--function) printf "\n" && _function_override; return 0;;
+        -o|--overridden) printf "\n" && _overridden; return 0;;
     esac
 
     # -------------------------------------------------------------------------
@@ -284,58 +283,9 @@ h() {
         if [[ "$builtin_info" =~ -f[[:space:]]+([^[:space:]]+) ]]; then
             origin="Loadable builtin → ${BASH_REMATCH[1]}"
         fi
-
-        # ── Check if the builtin is shadowed by something else 
-        local shadow_msg=""
-        local shadow_type=""
-
-        if alias "$cmd" &>/dev/null; then
-            shadow_type="alias"
-        elif declare -F "$cmd" &>/dev/null; then
-            shadow_type="function"
-        elif type -P "$cmd" &>/dev/null; then
-            shadow_type="PATH command → $(type -P "$cmd")"
-        fi
-
-        if [[ -n "$shadow_type" ]]; then
-            shadow_msg="${YELLOW}Shadowed by: ${shadow_type}${RESET}"
-        fi
-        
-    # Shadow detection
-    if [[ -n "$shadow_type" ]]; then
-        shadow_msg="${YELLOW}Shadowed by: ${shadow_type}${RESET}"
-        printf "%s    ↳ ${shadow_msg}\n" "$indent"
-
-        # If shadowed by PATH command, follow it
-        if [[ "$shadow_type" == PATH* ]]; then
-            local shadow_cmd="${shadow_type#PATH command → }"
-            printf "%s    ↳ Analyzing shadowing executable: ${CYAN}%s${RESET}\n" "$indent" "$shadow_cmd"
-            h "$shadow_cmd" $((depth + 1))
-            return 0
-        fi
-        
-        # If shadowed by alias command, follow it
-        if [[ "$shadow_type" == alias* ]]; then
-            local shadow_cmd="${shadow_type#PATH command → }"
-            alias_def=$(alias "$cmd")
-            printf "%s    ↳ Showing shadowing alias: ${CYAN}%s${RESET}\n" "$indent" "$alias_def"
-            return 0
-        fi
-        
-        # If shadowed by Function command, follow it
-        if [[ "$shadow_type" == function* ]]; then
-            local shadow_cmd="${shadow_type#PATH command → }"
-            printf "%s    ↳ Showing function: ${CYAN}%s${RESET}\n\n"  "$indent" "$shadow_cmd"        
-            func_content=$(declare -f "$shadow_cmd")
-            _highlight_script "$func_content" "$indent"
-            printf "\n%s    ─── End of function '%s' ───\n" "$indent" "$shadow_cmd"
-            return 0
-        fi
-    fi
     
         printf "%s    ↳ Status: Shell builtin is ${CYAN}%s${RESET}\n" "$indent" "$enabled_state"
         printf "%s    ↳ Source:  ${CYAN}%s${RESET}\n" "$indent" "$origin"
-        [[ -n "$shadow_msg" ]] && printf "%s    ↳ ${shadow_msg}\n" "$indent"
         printf "%s    ↳ Showing ${CYAN}'help %s'${RESET}:\n\n" "$indent" "$cmd"
         help "$cmd" 2>/dev/null | sed "s/^/$indent        /"
         return 0
@@ -423,7 +373,7 @@ h() {
                 _parse_commands "$seg" subcmds
 
                 for c in "${subcmds[@]}"; do
-                    printf "%s${CYAN}↳ Alias subcommand:${RESET} %s\n" "$indent" "$c"
+                    printf "%s${BPURP}    ↳ Alias subcommand:${RESET} %s\n" "$indent" "$c"
                     h "$c" $((depth + 1))
                 done
             done
@@ -468,6 +418,7 @@ h() {
     if [[ "$cmd_real" != "$cmd_path" ]]; then # && \
         printf "%s    ↳ ${YELLOW}Symbolic link ${RESET}to: ${YELLOW}%s${RESET}\n" "$indent" "$cmd_real"
         cmd_path="$cmd_real"
+        printf "%s    ↳ Now Examining: ${BPURP}%s${RESET}\n" "$indent" "$cmd_real"
     fi
 
     # -------------------------- 
@@ -689,8 +640,8 @@ _h-usage() {
            -h --help or h      Show this help text.
            -v --version        Show version information.
            -s --sourced        List all sourced files in the enviroment.
-           -a --alias          List all aliases that override a command in the enviroment.
-           -f --function       List all functions that override a command in the enviroment.
+           -o --overridden     List all commands that override a command in the enviroment.
+           
      Examples:
            h                   # Automatically analyzes your most recent command
            h sudo              # Analyzes 'sudo'
@@ -700,7 +651,7 @@ _h-usage() {
      Features:
        • Handles builtins, aliases, keywords, functions, and external commands
        • Detects symbolic links and script file contents
-       • Detects Shadowwing of commands
+       • Detects Shadowing of commands
        • Shows --help/-h/-? output or points to man pages
   
 EOF
@@ -713,7 +664,7 @@ EOF
 _h-ver() {
     cat <<'EOF'
 
-     h v3.1.1 — Bash Command Analyzer
+     h v3.1.2 — Bash Command Analyzer
      Author : John Blair
      Updated: 2025-11-10  
           
@@ -1047,7 +998,7 @@ _expand_vars() {
 }
 
 #-------------------------------------------------------------------------------------------------
-# Funtion: _sourcedtree
+# Function: _sourcedtree
 # Purpose: Recursively scan .bashrc for ALL files that are sourced. including conditionals.
 #-------------------------------------------------------------------------------------------------
 # Global array to track all sourced files
@@ -1133,7 +1084,7 @@ _expand_path() {
 }
 
 #-------------------------------------------------------------------------------------------------
-# Funtion: _sourced_files
+# Function: _sourced_files
 # Purpose: display ALL files that are sourced.
 #-------------------------------------------------------------------------------------------------
 _sourced_files() {
@@ -1154,6 +1105,17 @@ _sourced_files() {
 #
 #        how to add patterns and colors for highlighting
 #
+#  Example usage: To highlight the word forecast in bright magenta:
+#  HIGHLIGHT_PATTERNS+=('\bforecast\b') # your_regex_here
+#  HIGHLIGHT_COLORS+=('\x1b[95m')   # bright magenta - choose the ANSI color
+#
+#  Make sure that HIGHLIGHT_PATTERNS and HIGHLIGHT_COLORS remain aligned by index 
+#  (pattern i uses color i).
+#
+#  Multiple new entries: 
+#  HIGHLIGHT_PATTERNS+=('\bforecast\b' '\bradar\b') # Highlight 'forecast' and 'radar'
+#  HIGHLIGHT_COLORS+=('\x1b[95m' '\x1b[92m')  # bright magenta & bright green
+#-------------------------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------------------------
 _highlight_script() {
     local input="$1"
@@ -1260,6 +1222,18 @@ _check_dependencies() {
 }
 
 #-------------------------------------------------------------------------------------------------
+# Function: _overridden                         
+# Purpose : list all commands that override another command
+#-------------------------------------------------------------------------------------------------
+_overridden() {
+    _alias_override
+    printf "\n"  
+    _function_override
+    printf "\n"  
+    _builtin_disable_check
+}
+
+#-------------------------------------------------------------------------------------------------
 # Function: _alias_override                         
 # Purpose : list all aliases that override a command
 #-------------------------------------------------------------------------------------------------
@@ -1283,12 +1257,6 @@ _alias_override() {
 
         for akind in "${uniq[@]}"; do
             case "$akind" in
-                function)
-                    printf "%s    ↳ Alias ${YELLOW}%s${RESET} overrides a function of the same name.\n" "$indent" "$acmd"
-                    flag=1 ;;
-                keyword)
-                    printf "%s    ↳ Alias ${YELLOW}%s${RESET} overrides a shell keyword of the same name.\n" "$indent" "$acmd"
-                    flag=1 ;;
                 builtin)
                     printf "%s    ↳ Alias ${YELLOW}%s${RESET} overrides a builtin of the same name.\n" "$indent" "$acmd"
                     flag=1 ;;
@@ -1303,7 +1271,6 @@ _alias_override() {
         printf "%s    ↳ ${CYAN}No command or builtin is overridden.${RESET}\n" "$indent"
     fi
 }
-
 
 #-------------------------------------------------------------------------------------------------
 # Function: _function_override                         
@@ -1326,7 +1293,7 @@ _function_override() {
                     func_flag=1
                     ;;
                 keyword)
-                    printf "%s    ↳ Function ${YELLOW}%s${RESET} overrides a shell keyword of the same name.\n" "$indent" "$funcmd"
+                    printf "%s    ↳ Function ${YELLOW}%s${RESET} conflicts with a shell keyword of the same name (keyword takes precedence).\n" "$indent" "$funcmd"
                     func_flag=1
                     ;;
                 builtin)
@@ -1346,7 +1313,49 @@ _function_override() {
     fi
 }
 
+#-------------------------------------------------------------------------------------------------
+# Function: _builtin_disable_check
+# Purpose : list builtins that are disabled and note if external commands replace them
+#-------------------------------------------------------------------------------------------------
+_builtin_disable_check() {
+    printf "%s├─ Checking for disabled builtins to detect overridden commands:\n" "$indent"
+
+    local b disabled=()
+
+    # Collect disabled builtins
+    while read -r b; do
+        disabled+=("${b#enable -n }")
+    done < <(enable -a | grep '^enable -n ')
+
+    if (( ${#disabled[@]} == 0 )); then
+        printf "%s    ↳ No builtins are disabled.\n" "$indent"
+        return
+    fi
+
+    local name
+    for name in "${disabled[@]}"; do
+        printf "%s    ↳ Builtin ${YELLOW}%s${RESET} is DISABLED.\n" "$indent" "$name"
+
+        # 1. Alias replacement?
+        if alias "$name" &>/dev/null; then
+            printf "%s       • Alias ${YELLOW}'%s'${RESET} now replaces the builtin.\n" "$indent" "$name"
+            continue
+        fi
+
+        # 2. Function replacement?
+        if declare -F "$name" &>/dev/null; then
+            printf "%s       • Function ${YELLOW}'%s'${RESET} now replaces the builtin.\n" "$indent" "$name"
+            continue
+        fi
+
+        # 3. External command replacement?
+        if command -v "$name" &>/dev/null; then
+            printf "%s       • External command ${YELLOW}'%s'${RESET} now replaces the builtin.\n" "$indent" "$name"
+        else
+            printf "%s       • No alias, function, or command replaces ${CYAN}'%s'${RESET}.\n" "$indent" "$name"
+        fi
+    done
+}
 
 #-------------------------------------------------------------------------------------------------
 # End of script
-

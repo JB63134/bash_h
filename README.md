@@ -13,7 +13,7 @@ A shell-command introspection tool that tells you what a command really is. Inst
 
 🔍Command Resolution: For any given command, h identifies: aliases, functions, builtins, keywords, external binaries, wrapper scripts, interpreted scripts and follows symlinks to find the exact thing that Bash will execute.
 
-🧭 PATH Inspection: Displays the full resolved path. Can help you identify $PATH ordering issues, and overridden commands.
+🧭 PATH Inspection: Displays the full resolved path and alerts you of symlinks. Can help you identify $PATH ordering issues, and overridden commands.
 
 🔁 Recursive Analysis: (work in progress) Depth-limited to avoid infinite loops.
 

@@ -1,7 +1,7 @@
 
 📦 h — A Buggy (But Ambitious) Bash Command Analyzer
 
-h is a shell-command introspection tool that tells you what a command really is. Instead of relying on multiple tools (type, which, command -V, compgen, alias, etc.), h unifies all resolution logic into a single command analysis engine.
+h is a shell-command introspection tool that tells you what a command really is. Instead of relying on multiple tools (type, which, command -V, declare, alias, etc.), h unifies all resolution logic into a single command analysis engine.
 
 🚀 Overview: Modern shells resolve commands through a layered chain: Alias → Function → Builtin → keyword → File in $PATH (Script / Binary).  h tries to walk this chain recursively, determining the true implementation of any command while providing relevent information and any available help.
 
@@ -15,13 +15,13 @@ h is a shell-command introspection tool that tells you what a command really is.
 
 🔁 Recursive Analysis: (work in progress) Depth-limited to avoid infinite loops.
 
-📜 Alias Introspection: If a command resolves to an alias, h shows: alias definition, source file & line number (when available), recursive expansion and can alert you of aliases shadowing other files, builtins, etc.
+📜 Alias Introspection: If a command resolves to an alias, h shows: alias definition, source file & line number (when available), recursive expansion and can alert you of aliases that shadow other files, etc.
 
-📜 Function Introspection: h extracts full function definition with a syntax-highlighted preview, and source file & line number (when available).
+📜 Function Introspection: h extracts full function definition with a syntax-highlighted preview, and source file & line number (when available). Can alert you of Functions that shadow other files, builtins, etc.
 
 📜 Script Introspection: h identifies shebang interpreter, real file location (follows symlinks), shows syntax-highlighted preview.  Supports: bash, sh, python, perl, ruby, node, awk, sed, and any #! file.
 
-📜 Builtin Introspection Shows: whether the builtin is enabled, whether it is a core builtin or loadable, and ofcourse 'help <command>'
+📜 Builtin Introspection Shows: whether the builtin is enabled, whether it is a core builtin or loadable, and help via 'help <command>'
 
 ⚙️ ELF Binary Analysis Displays: architecture, dynamic vs static linking, ELF interpreter, (ld-linux) capabilities, SUID/SGID bits, owner & permissions, resolved real path  (follows symlinks), List all dependencies and identify missing dependencies. and provides help output by iterating through common flags '<command> --help -help -h -?' with a fallback to alert the user if a man page exists.
 

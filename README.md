@@ -1,9 +1,7 @@
 
 📦 h — A Buggy (But Ambitious) Bash Command Analyzer
 
-h is a deep-introspection utility for Bash.
-
-A shell-command introspection tool that tells you what a command really is. Instead of relying on multiple tools (type, which, command -V, compgen, alias, etc.), h unifies all resolution logic into a single command analysis engine.
+h is a shell-command introspection tool that tells you what a command really is. Instead of relying on multiple tools (type, which, command -V, compgen, alias, etc.), h unifies all resolution logic into a single command analysis engine.
 
 🚀 Overview: Modern shells resolve commands through a layered chain: Alias → Function → Builtin → keyword → File in $PATH (Script / Binary).  h tries to walk this chain recursively, determining the true implementation of any command while providing relevent information and any available help.
 
@@ -19,9 +17,9 @@ A shell-command introspection tool that tells you what a command really is. Inst
 
 📜 Alias Introspection: If a command resolves to an alias, h shows: alias definition, source file & line number (when available), recursive expansion and can alert you of aliases shadowing other files, builtins, etc.
 
-📜 Function Introspection: h extracts full function definition with a syntax-highlighted preview, and Location - file & line number (when available).
+📜 Function Introspection: h extracts full function definition with a syntax-highlighted preview, and source file & line number (when available).
 
-📜 Script Introspection: h identifies shebang interpreter, real file location (follows symlinks), syntax-highlighted preview.  Supports: bash, sh, python, perl, ruby, node, awk, sed, and any #! file.
+📜 Script Introspection: h identifies shebang interpreter, real file location (follows symlinks), shows syntax-highlighted preview.  Supports: bash, sh, python, perl, ruby, node, awk, sed, and any #! file.
 
 📜 Builtin Introspection Shows: whether the builtin is enabled, whether it is a core builtin or loadable, and ofcourse 'help <command>'
 
@@ -44,9 +42,6 @@ A shell-command introspection tool that tells you what a command really is. Inst
      Analyze history references:
      h !42 
 
-
-
-
 💡 Tips Use h when a command behaves unexpectedly. Use it to debug PATH issues or command conflicts. Use it when aliases or functions override global tools. Use it to audit your environment for security problems Or simply use it to explore Bash internals
 
 ------------------------------------------------------------------------------------------------------------------
@@ -67,7 +62,7 @@ V3.0.0
       I decided to rewrite h so that i could get help from multiple sources.
       Using common flags like '<command> --help', -help, -h, or -?.
       For builtins and some keywords use 'help <command>' 
-      As a fallback, it checks if a man page exists and alerts the user.
+      As a fallback, checks if a man page exists and alerts the user.
       For aliases, functions and scripts - handle displaying contents.
       Then feature creep got away from me and Now I have this 1300+ line mess in BASH.
       Plus! it's 2025, so the parser, and pipeline handling are vibe coded! (chatgpt sucks)

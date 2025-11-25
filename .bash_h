@@ -148,7 +148,11 @@ h() {
             export OLD_PATH
             return 0
     fi
-    
+    if [[ "$cmd" == "]" ]]; then
+        printf "%s├─ Detected BASH Keyword ${CYAN}'%s' ${RESET}\n" "$indent" "$cmd"
+        printf "%s    ↳ ${CYAN}%s${RESET} -- Ends a conditional test expression.\n" "$indent" "$cmd"
+        return 0
+    fi
     # -------------------------------------------------------------------------
     # Split and analyze pipelines, chains, and lists safely
     # -------------------------------------------------------------------------
@@ -223,7 +227,7 @@ h() {
             return 0
         fi
       
-        if [[ "$cmd" == "]" ]]; then
+        if [[ "$cmd" == "]]" ]]; then
             printf "%s├─ Detected BASH Keyword ${CYAN}'%s' ${RESET}\n" "$indent" "$cmd"
             printf "%s    ↳ ${CYAN}%s${RESET} -- Ends a conditional test expression.\n" "$indent" "$cmd"
             return 0

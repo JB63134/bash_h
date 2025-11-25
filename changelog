@@ -1,3 +1,7 @@
+V3.1.13
+      bug fixes
+      added support for detecting binaries with SUID set
+
 V3.1.11 
       bunch of bug fixes and code cleanup.
       added support for detecting builtins that are disabled and overridden by other commands.

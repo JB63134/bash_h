@@ -1,3 +1,8 @@
+V3.1.15
+      bug fixes,
+      eliminated need for apt. code is now MUCH faster
+      cleaned up some recursion issues.
+
 V3.1.13
       Now we have this 1400+ line mess in BASH
       bug fixes

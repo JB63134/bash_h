@@ -7,7 +7,7 @@ A shell-command introspection tool that tells you what a command really is. Inst
 
 🚀 Overview: Modern shells resolve commands through a layered chain: Alias → Function → Builtin → keyword → File in $PATH (Script / Binary).  h tries to walk this chain recursively, determining the true implementation of any command while providing relevent information and any available help.
 
-🧪 Use Cases Understand what actually runs when you type a command. Audit scripts and wrappers in toolchains. Debug $PATH problems. Identify missing dependencies. Identify SUID / capability-based escalation paths. Identify aliases and functions that override other commands, Identify disabled builtins that have been overridden by executables.
+🧪 Use Cases Understand what actually runs when you type a command. Audit scripts and wrappers in toolchains. Debug $PATH problems. Identify missing dependencies. Identify SUID / capability-based escalation paths. Identify aliases and functions that override other commands, Identify disabled builtins that have been overridden by executables. and get help information.
 
 ✨ Key Features 
 

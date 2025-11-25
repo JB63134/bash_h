@@ -136,6 +136,7 @@ h() {
         -s|--sourced) printf "\n" && _sourced_files; return 0;;
         -o|--overridden) printf "\n" && _overridden; return 0;;
         -p|--path) printf "\n" && _writable_dir_in_path; return 0;;
+        -S|--suid) printf "\n" && _suid_scan; return 0;;
     esac
     
     # -------------------------------------------------------------------------
@@ -657,6 +658,7 @@ _h-usage() {
            -s --sourced        List all sourced files in the enviroment.
            -o --overridden     List all commands that override a command in the enviroment.
            -p --path           list all writable directories in $PATH
+           -S --suid           Scan for SUID binaries
            
      Examples:
            h                   # Automatically analyzes your most recent command
@@ -708,6 +710,30 @@ _h-ver() {
 EOF
 }
 
+#------------------------------------------------------------------------
+# Function: _suid_scan
+# Purpose : Scan for SUID binaries
+#------------------------------------------------------------------------
+_suid_scan() {
+    printf "├─ Scanning for SUID binaries:\n"
+
+    while IFS= read -r hit; do
+        printf "    ↳ %s\n" "$hit"
+    done < <(find / -perm -4000 -type f -exec ls -l {} + 2>/dev/null)
+}
+_suid_scan2() {
+    printf "├─ Scanning for SUID binaries (parallelized):\n"
+
+    # Export function for xargs (optional if using simple command)
+    export -f
+
+    # Find SUID files and list them in parallel
+    find / -perm -4000 -type f 2>/dev/null \
+        | xargs -P 8 -I {} ls -l {} 2>/dev/null \
+        | while IFS= read -r hit; do
+            printf "    ↳ %s\n" "$hit"
+        done
+}
 #------------------------------------------------------------------------
 # Function: _writable_dir_in_path
 # Purpose : Detect writable directories in $PATH

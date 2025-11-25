@@ -1,6 +1,7 @@
 V3.1.11 
       bunch of bug fixes and code cleanup.
-      added support for detecting builtins that are disabled and overrridden by other commands.
+      added support for detecting builtins that are disabled and overridden by other commands.
+
 V3.1.1
       added support for detecting all functions that overrride other commands.
       And made alias override detection more robust.

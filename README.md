@@ -25,9 +25,9 @@ h is a shell-command introspection tool that tells you what a command really is.
 
 ⚙️ ELF Binary Analysis Displays: architecture, dynamic vs static linking, ELF interpreter, (ld-linux) capabilities, SUID/SGID bits, owner & permissions, resolved real path  (follows symlinks), List all dependencies and identify missing dependencies. and provides help output by iterating through common flags '<command> --help -help -h -?' with a fallback to alert the user if a man page exists.
 
-📦 Package Lookup On Debian/Ubuntu systems: uses dpkg and apt to display the package name, version,  maintainer info, and package description.
+📦 Package Lookup On Debian/Ubuntu systems: uses dpkg to display the package name, version,  maintainer info, and package description.
 
-🛠️ Installation: Source bash_h.sh 
+🛠️ Installation: Source .bash_h 
  
 🛠️ Usage Basic: 
 

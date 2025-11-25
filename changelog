@@ -1,3 +1,5 @@
+V3.1.11 
+      bunch of bug fixes and code cleanup.
 V3.1.1
       added support for detecting all functions that overrride other commands.
       And made alias override detection more robust.

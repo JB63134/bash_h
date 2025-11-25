@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-#-------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------
 # .bash_h
 # Main Function: h
 # Purpose: Analyzes a Bash command, alias, builtin, keyword, function, or binary
-#-------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------
 
 OLD_PATH="$PATH"
 
@@ -133,8 +133,9 @@ h() {
     case "$cmd" in
         -h|--help) _h-usage; return 0;;
         -v|--version) _h-ver; return 0;;
-        -s|--sourced) _sourced_files; return 0;;
+        -s|--sourced) printf "\n" && _sourced_files; return 0;;
         -o|--overridden) printf "\n" && _overridden; return 0;;
+        -p|--path) printf "\n" && _writable_dir_in_path; return 0;;
     esac
     
     # -------------------------------------------------------------------------
@@ -638,11 +639,11 @@ fi
         return 0
     fi
 }
-
-#-------------------------------------------------------------------------------------------------
+ 
+#------------------------------------------------------------------------
 # Function: _h-usage
 # Purpose : Display usage information and examples for the `h` command analyzer.
-#-------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------
 _h-usage() {
     cat <<'EOF'
 
@@ -655,6 +656,7 @@ _h-usage() {
            -v --version        Show version information.
            -s --sourced        List all sourced files in the enviroment.
            -o --overridden     List all commands that override a command in the enviroment.
+           -p --path           list all writable directories in $PATH
            
      Examples:
            h                   # Automatically analyzes your most recent command
@@ -670,14 +672,14 @@ _h-usage() {
 EOF
 }
 
-#-------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------
 # Function: _h-ver
 # Purpose : Display version information.
-#-------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------
 _h-ver() {
     cat <<'EOF'
 
-     h v3.1.11 — Bash Command Analyzer
+     h v3.1.12 — Bash Command Analyzer
      Author : John Blair
      Updated: 2025-11-10  
           
@@ -706,10 +708,53 @@ _h-ver() {
 EOF
 }
 
-#--------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------
+# Function: _writable_dir_in_path
+# Purpose : Detect writable directories in $PATH
+#------------------------------------------------------------------------
+_writable_dir_in_path() {
+    PATH="$OLD_PATH" 
+    printf "├─ Examining PATH:\n"
+    printf "├─ Identifying writable directories:\n"
+
+    # List all writable directories quickly
+    printf "%s\n" ${PATH//:/ } |
+    while read -r d; do
+        [ -d "$d" ] || continue
+        if [ -w "$d" ]; then
+            printf "    ↳ ${YELLOW}Writable directory in PATH: ${CYAN}%s${RESET}\n" "$d"
+        fi
+    done
+
+    printf "\n├─ Examining PATH directory permissions:\n"
+    printf "    ↳ %-40s %-15s %-20s %-10s\n" "Directory" "Perms" "Owner:Group" "Note"
+    
+    IFS=: read -ra dirs <<< "$PATH"
+    for dir in "${dirs[@]}"; do
+        [ -d "$dir" ] || continue
+
+        perms=$(stat -c "%A" "$dir")
+        owner_g=$(stat -c "%U:%G" "$dir")
+        
+        note=""
+
+        # Check if world-writable (other write bit set)
+        if [ -w "$dir" ] && [ "${perms:8:1}" = "w" ]; then
+            note="${BPURP}WORLD-WRITABLE${RESET}"
+            printf "    ↳ ${RED}%-40s %-15s %-20s ${RESET}%-10s\n" "$dir" "$perms" "$owner_g" "$note"
+        elif [ -w "$dir" ]; then
+            note="Writable"
+            printf "    ↳ ${YELLOW}%-40s %-15s %-20s %-10s${RESET}\n" "$dir" "$perms" "$owner_g" "$note"
+        else
+            printf "    ↳ %-40s %-15s %-20s %-10s\n" "$dir" "$perms" "$owner_g" "$note"
+        fi
+    done
+}
+
+#------------------------------------------------------------------------
 # Function: _split_top_level_commands
 # Purpose : Split a Bash command line into top-level segments
-#--------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------
 _split_top_level_commands() {
     local input="$1"
     local -n out="$2"
@@ -818,10 +863,10 @@ _split_top_level_commands() {
     fi
 }
 
-#--------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------
 # Function: _parse_commands
 # Purpose : Parse a Bash segment into actual executed commands using a conservative tokenizer
-#--------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------
 _parse_commands() {
     local cmdline="$1"
     local -n out_arr="${2:-out_arr}" 2>/dev/null || local -n out_arr="$2"
@@ -978,10 +1023,10 @@ _parse_commands() {
     done
 }
 
-#-------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------
 # Function: _h_completion
 # Purpose : Enable tab completion for entering commands 
-#-------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------
 _h_completion() {
     local cur="${COMP_WORDS[COMP_CWORD]}"
     local commands
@@ -993,10 +1038,10 @@ _h_completion() {
     COMPREPLY=( $(compgen -W "$commands" -- "$cur") )
 }
 
-#-------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------
 # Function: _expand_vars
 # Purpose : expand variables for aliases so $HOME resolves to /home/jb/ 
-#-------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------
 _expand_vars() {
     local input="$1"
     # Only expand variables like $HOME, $USER, etc. Use 'printf' with parameter expansion to avoid arbitrary command execution.
@@ -1009,10 +1054,10 @@ _expand_vars() {
     printf '%s' "$out"
 }
 
-#-------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------
 # Function: _sourcedtree
 # Purpose: Recursively scan .bashrc for ALL files that are sourced. including conditionals.
-#-------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------
 # Global array to track all sourced files
 declare -gA SOURCED_FILES_MAP=()   # associative array to avoid duplicates
 declare -ga SOURCED_FILES_LIST=()  # optional list preserving order
@@ -1095,10 +1140,10 @@ _expand_path() {
     printf '%s\n' "$p"
 }
 
-#-------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------
 # Function: _sourced_files
 # Purpose: display ALL files that are sourced.
-#-------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------
 _sourced_files() {
     local garbage_count=${#garbage[@]}
     _sourcedtree
@@ -1111,7 +1156,7 @@ _sourced_files() {
     printf "\n      End of list\n"
 }        
 
-#-------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------
 # Function: _highlight_script   # _highlight_script "$path-to-script" "<blankspaces>"
 # Purpose: Modular syntax highlighting with indentation based on string in $2
 #
@@ -1127,8 +1172,7 @@ _sourced_files() {
 #  Multiple new entries: 
 #  HIGHLIGHT_PATTERNS+=('\bforecast\b' '\bradar\b') # Highlight 'forecast' and 'radar'
 #  HIGHLIGHT_COLORS+=('\x1b[95m' '\x1b[92m')  # bright magenta & bright green
-#-------------------------------------------------------------------------------------------------
-#-------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------
 _highlight_script() {
     local input="$1"
     local indent="${2:-}"
@@ -1191,11 +1235,11 @@ _highlight_script() {
     printf "%s\n" "$highlighted" | sed "s/^/$indent    /"
 }
 
-#-------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------
 # Function: _check_dependencies
 # Purpose : Check core and optional dependencies, warn user, optionally exit on missing core deps
 # Usage   : _check_dependencies needed_deps optional_deps [EXIT_ON_MISSING] 0or1
-#-------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------
 
 needed_deps=(grep sed head readlink file ldd getcap)
 optional_deps=(dpkg apt find realpath cut awk xargs tput)
@@ -1233,10 +1277,10 @@ _check_dependencies() {
 
 }
 
-#-------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------
 # Function: _overridden                         
 # Purpose : list all commands that override another command
-#-------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------
 _overridden() {
     _alias_override
     printf "\n"  
@@ -1245,10 +1289,10 @@ _overridden() {
     _builtin_override
 }
 
-#-------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------
 # Function: _alias_override                         
 # Purpose : list all aliases that override a command
-#-------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------
 _alias_override() { 
     local acmd list akind
     local flag=0
@@ -1284,10 +1328,10 @@ _alias_override() {
     fi
 }
 
-#-------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------
 # Function: _function_override                         
 # Purpose : list all functions that override a command
-#-------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------
 _function_override() { 
     local funcmd kind kinds 
     local func_flag=0
@@ -1325,10 +1369,10 @@ _function_override() {
     fi
 }
 
-#-------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------
 # Function: _builtin_override
 # Purpose : list builtins that are disabled and note if external commands replace them
-#-------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------
 _builtin_override() {
     printf "%s├─ Examining disabled builtins to identify any replacement commands:\n" "$indent"
 
@@ -1371,5 +1415,5 @@ _builtin_override() {
     done
 }
 
-#-------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------
 # End of script

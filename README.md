@@ -11,7 +11,7 @@ A shell-command introspection tool that tells you what a command really is. Inst
 
 ✨ Key Features 
 
-🔍Command Resolution: For any given command, h identifies: aliases, functions, builtins, keywords, external binaries, symlinks / wrapper scripts, and interpreted scripts to find the exact thing that Bash will execute.
+🔍Command Resolution: For any given command, h identifies: aliases, functions, builtins, keywords, external binaries, wrapper scripts, interpreted scripts and follows symlinks to find the exact thing that Bash will execute.
 
 🧭 PATH Inspection: Displays the full resolved path. Can help you identify $PATH ordering issues, and overridden commands.
 
@@ -19,13 +19,13 @@ A shell-command introspection tool that tells you what a command really is. Inst
 
 📜 Alias Introspection: If a command resolves to an alias, h shows: alias definition, source file & line number (when available), recursive expansion and can alert you of aliases shadowing other files, builtins, etc.
 
-📜 Function Introspection h extracts: full function definition file & line number (when available) with a syntax-highlighted preview
+📜 Function Introspection: h extracts full function definition with a syntax-highlighted preview, and Location - file & line number (when available).
 
-📜 Script Introspection For scripts, h identifies: shebang interpreter,  interpreter path, real file location (follows symlinks), syntax-highlighted preview.  Supports: bash, sh, python, perl, ruby, node, awk, sed, and any #! file.
+📜 Script Introspection: h identifies shebang interpreter, real file location (follows symlinks), syntax-highlighted preview.  Supports: bash, sh, python, perl, ruby, node, awk, sed, and any #! file.
 
 📜 Builtin Introspection Shows: whether the builtin is enabled, whether it is a core builtin or loadable, and ofcourse 'help <command>'
 
-⚙️ ELF Binary Analysis Displays: architecture, dynamic vs static linking, ELF interpreter, (ld-linux) capabilities, SUID/SGID bits, owner & permissions, resolved real path, List all dependencies and identify missing dependencies. and provides help output by iterating through common flags '<command> --help -help -h -?' with a fallback to alert the user if a man page exists.
+⚙️ ELF Binary Analysis Displays: architecture, dynamic vs static linking, ELF interpreter, (ld-linux) capabilities, SUID/SGID bits, owner & permissions, resolved real path  (follows symlinks), List all dependencies and identify missing dependencies. and provides help output by iterating through common flags '<command> --help -help -h -?' with a fallback to alert the user if a man page exists.
 
 📦 Package Lookup On Debian/Ubuntu systems: uses dpkg and apt to display the package name, version,  maintainer info, and package description.
 

@@ -4,6 +4,11 @@
 # Main Function: h
 # Purpose: Analyzes a Bash command, alias, builtin, keyword, function, or binary
 #------------------------------------------------------------------------
+# If not running interactively, don't do anything
+case $- in
+    *i*) ;;
+      *) return;;
+esac
 
 OLD_PATH="$PATH"
 
@@ -17,39 +22,6 @@ complete -F _h_completion h
 
 h() {
     # -------------------------
-    # Set path for system commands to be included 
-    # -------------------------
-    trap 'PATH="$OLD_PATH"' RETURN
-
-    local admin_dirs=(
-        "$HOME/.local/bin"
-        "$HOME/bin/scripts"
-        "$HOME/bin"
-        "/usr/local/bin"
-        "/usr/local/sbin"
-        "/usr/local/games"
-        "/usr/bin"
-        "/usr/sbin"        
-        "/usr/games"
-        "/bin"
-        "/sbin"   
-        )
-    
-    # Add admin dirs to PATH if missing
-    for dir in "${admin_dirs[@]}"; do
-        if [[ -d "$dir" && ":$PATH:" != *":$dir:"* ]]; then
-            PATH="$PATH:$dir"
-        fi
-    done
-
-    export PATH
-    
-    # -------------------------
-    # Check dependencies
-    # -------------------------
-    _check_dependencies needed_deps optional_deps 1  # 1 = exit if required deps missing
-   
-    # -------------------------
     # LOCAL Variables
     # -------------------------
     local fcmd cmd ctype cmd_path alias_expansion RED GREEN CYAN RESET 
@@ -57,9 +29,57 @@ h() {
     local cmdline="$*"
     local MAX_DEPTH=8
     local indent=$(printf "%*s" $((depth * 4)) "")
-     
+    
     # -------------------------
-    # Colors (tput → ANSI → none)
+    # Set first run variables path etc... keep from running every recursive loop 
+    # set new path, clean arrays, and greet user once
+    # -------------------------
+    if (( depth == 0 )); then
+        trap 'PATH="$OLD_PATH"' RETURN
+
+        local admin_dirs=(
+            "$HOME/.local/bin"
+            "$HOME/bin/scripts"
+            "$HOME/bin"
+            "/usr/local/bin"
+            "/usr/local/sbin"
+            "/usr/local/games"
+            "/usr/bin"
+            "/usr/sbin"        
+            "/usr/games"
+            "/bin"
+            "/sbin"   
+            )
+    
+        # Add admin dirs to PATH if missing
+        for dir in "${admin_dirs[@]}"; do
+            if [[ -d "$dir" && ":$PATH:" != *":$dir:"* ]]; then
+                PATH="$PATH:$dir"
+            fi
+        done
+        export PATH
+   
+        # -------------------------
+        # Check dependencies
+        _check_dependencies needed_deps optional_deps 1  # 1 = exit if required deps missing
+
+        #--------------------------
+        # Reset arrays on first run
+        #--------------------------
+        __H_SEEN_ALIASES=()
+        __H_SEEN_COMMANDS=()
+        __H_SEEN_BUILTINS=()
+        __H_SHADOW_SEEN=()
+        __H_VISITED=()
+   
+        #--------------------------
+        # Greeting
+        #--------------------------
+        printf "\n├─ h - a buggy BASH Command Analyzer\n"
+    fi 
+    
+    # -------------------------
+    # Colors (tput → ANSI)
     # -------------------------
     if command -v tput &>/dev/null && [[ $(tput colors 2>/dev/null) -ge 8 ]]; then
         # Preferred: tput colors
@@ -77,28 +97,8 @@ h() {
         YELLOW='\033[93m'
         BPURP='\033[95m'
         RESET='\033[0m'
-
-        # Verify terminal supports ANSI colors
-        if [[ -t 1 ]]; then
-            # terminal is interactive — keep ANSI
-            :
-        else
-            # non-interactive — disable colors
-            RED=""; GREEN=""; CYAN=""; YELLOW=""; BPURP=''; RESET=""
-        fi
     fi
-
-    #--------------------------
-    # Reset arrays on first run
-    #--------------------------
-    if (( depth == 0 )); then
-        __H_SEEN_ALIASES=()
-        __H_SEEN_COMMANDS=()
-        __H_SEEN_BUILTINS=()
-        __H_SHADOW_SEEN=()
-        __H_VISITED=()
-    fi
-
+        
     # -------------------------
     # Depth guard
     # -------------------------
@@ -106,14 +106,7 @@ h() {
         printf "%s${RED}Max recursion depth (%d) reached${RESET}\n" "$indent" "$MAX_DEPTH"
         return 1 
     }
-   
-    #--------------------------
-    # Greeting
-    #--------------------------
-    if (( depth == 0 )); then
-        printf "\n├─ h - a buggy BASH Command Analyzer\n"
-    fi 
-   
+    
     # -------------------------
     # Get command or last command
     # -------------------------
@@ -472,7 +465,7 @@ fi
 
         # 4. Known admin commands
         if (( !requires_root )); then
-            local root_cmds=(mount umount reboot shutdown halt ifconfig iptables ip systemctl journalctl modprobe insmod rmmod fdisk mkfs losetup parted fsck useradd userdel passwd chown chmod service sysctl visudo fstrim swapoff swapon update-grub grub-installg disk parted blkid update-initramfs)
+            local root_cmds=(mount umount reboot shutdown halt ifconfig iptables ip systemctl journalctl modprobe insmod rmmod fdisk mkfs losetup parted fsck useradd userdel passwd chown chmod service sysctl visudo fstrim swapoff swapon update-grub grub-install blkid update-initramfs)
             for rcmd in "${root_cmds[@]}"; do
                 if [[ "$cmd" == "$rcmd" ]]; then
                     requires_root=1
@@ -551,11 +544,11 @@ fi
             pkg_name=$(dpkg -S "$cmd_path" 2>/dev/null | cut -d: -f1 | head -n1)
 
             if [[ -n "$pkg_name" ]]; then
-                # Read apt show output line by line
+                # Read dpkg show output line by line
                 while IFS= read -r line; do
                     pkg_lines+=("$line")
-                done < <(apt show "$pkg_name" 2>/dev/null | grep -E 'Package:|Version:|Maintainer:|Description:'| awk -F': ' '{print $2}')
-
+                done < <(dpkg-query -W -f='${Package}\n${Version}\n${Maintainer}\n${Description}\n' "$pkg_name" 2>/dev/null)
+                
                 # Display each line with custom formatting
                 printf "%s    ↳ Package Info:\n" "$indent"
                 printf "%s    ⎟    Package: ${CYAN}%s${RESET}\n" "$indent" "${pkg_lines[0]}"
@@ -594,7 +587,7 @@ fi
             fi
             return 0
         fi
-    
+
     # Show help for external commands 
         local output cmdname hout
         local output_shown=0 
@@ -681,7 +674,7 @@ EOF
 _h-ver() {
     cat <<'EOF'
 
-     h v3.1.12 — Bash Command Analyzer
+     h v3.1.15 — Bash Command Analyzer
      Author : John Blair
      Updated: 2025-11-10  
           
@@ -1268,7 +1261,7 @@ _highlight_script() {
 #------------------------------------------------------------------------
 
 needed_deps=(grep sed head readlink file ldd getcap)
-optional_deps=(dpkg apt find realpath cut awk xargs tput)
+optional_deps=(dpkg find realpath cut awk xargs tput)
 
 _check_dependencies() {
     local -n required="$1"    # Required dependencies (pass by name)

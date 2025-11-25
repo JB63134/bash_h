@@ -106,7 +106,14 @@ h() {
         printf "%s${RED}Max recursion depth (%d) reached${RESET}\n" "$indent" "$MAX_DEPTH"
         return 1 
     }
-    
+   
+    #--------------------------
+    # Greeting
+    #--------------------------
+    if (( depth == 0 )); then
+        printf "\n├─ h - a buggy BASH Command Analyzer\n"
+    fi 
+   
     # -------------------------
     # Get command or last command
     # -------------------------
@@ -114,19 +121,12 @@ h() {
         read -r -a fcmd <<< "$1"
     else
         read -r -a fcmd <<< "$(fc -ln -1)" || { 
-            printf "%s${RED}Failed to get last command${RESET}\n" "$indent"
+            printf "%s    ↳ ${RED}Failed to get last command${RESET}\n" "$indent"
             return 1
         }
     fi
     cmd="${fcmd[0]}"
     
-    #--------------------------
-    # Greeting
-    #--------------------------
-    if (( depth == 0 )); then
-        printf "\n├─ h - a buggy BASH Command Analyzer\n"
-    fi 
-     
     # -------------------------------------------------------------------------
     # handle arguments for h
     # -------------------------------------------------------------------------
@@ -136,7 +136,19 @@ h() {
         -s|--sourced) _sourced_files; return 0;;
         -o|--overridden) printf "\n" && _overridden; return 0;;
     esac
-
+    
+    # -------------------------------------------------------------------------
+    # Handle h for now, prevent h from analyzing itself because 
+    # it will spam the screen with itself
+    # -------------------------------------------------------------------------
+    if [[ "$cmd" == "h" ]]; then
+            printf "%s├─ Detected ${CYAN}'%s' ${RESET}\n" "$indent" "$cmd"
+            printf "%s    ↳ Showing  ${CYAN}'%s --help'${RESET}:\n\n"  "$indent" "$cmd"
+            _h-usage
+            export OLD_PATH
+            return 0
+    fi
+    
     # -------------------------------------------------------------------------
     # Split and analyze pipelines, chains, and lists safely
     # -------------------------------------------------------------------------
@@ -158,138 +170,136 @@ h() {
     fi
 
     # -------------------------------------------------------------------------
-    # Handle h for now, prevent h from analyzing itself because 
-    # it will spam the screen with itself
-    # -------------------------------------------------------------------------
-    if [[ "$cmd" == "h" ]]; then
-            printf "%s├─ Detected ${CYAN}'%s' ${RESET}\n" "$indent" "$cmd"
-            printf "%s    ↳ Showing  ${CYAN}'%s --help'${RESET}:\n\n"  "$indent" "$cmd"
-            _h-usage
-            export OLD_PATH
-            return 0
-    fi
-
-    # -------------------------------------------------------------------------
-    # Handle "sudo"
-    # -------------------------------------------------------------------------
-    if [[ "$cmd" == "sudo" ]]; then
-        if (( ${#fcmd[@]} == 1 )); then
-            printf "%s├─ Detected ${CYAN}'%s' ${RESET}with no command\n" "$indent" "$cmd"
-            printf "%s    ↳ Showing  ${CYAN}'%s --help'${RESET}:\n\n"  "$indent" "$cmd"
-            sudo --help 2>/dev/null | sed 's/^/    /'
-            return 0
-        fi
-
-        # Strip 'sudo' and analyze the underlying command
-        local next_cmd
-        next_cmd="${fcmd[@]:1}"
-        printf "%s├─ Detected ${CYAN}'sudo'${RESET}, analyzing underlying command:\n" "$indent"
-        h "$next_cmd" $((depth + 1)) 
-        return 0
-    fi
-    
-    # -------------------------------------------------------------------------
-    # Handle keywords and provide help statements
-    # -------------------------------------------------------------------------
-    if [[ "$cmd" == "if" || "$cmd" == "case" ||  "$cmd" == "for" || "$cmd" == "select" || "$cmd" == "while" || "$cmd" == "until" || "$cmd" == "function" || "$cmd" == "time" || "$cmd" == "{" || "$cmd" == "[[" || "$cmd" == "coproc" ]]; then
-    
-        printf "%s├─ Detected BASH Keyword ${CYAN}'%s' ${RESET}\n" "$indent" "$cmd"
-        printf "%s    ↳ Showing  ${CYAN}'help %s'${RESET}:\n\n" "$indent" "$cmd"
-        help "$cmd" 2>/dev/null | sed 's/^/    /'
-        return 0
-    fi
-    
-    case "$cmd" in
-      then|else|elif|fi|do|done|in|!|])
-          description=""
-          case "$cmd" in
-              then) description="Begins the command block for a true condition." ;;
-              else) description="Begins the command block if the condition is false." ;;
-              elif) description="Introduces a new condition if the previous one is false." ;;
-              fi)   description="Ends an if statement." ;;
-              do)   description="Begins the body of a loop or conditional block." ;;
-              done) description="Ends the body of a loop or conditional block." ;;
-              in)   description="Specifies the list to iterate over in a loop." ;;
-              !)    description="Negates the exit status of a command or pipeline." ;;
-              ])    description="Ends a conditional test expression." ;;
-          esac
-          printf "%s├─ Detected BASH Keyword ${CYAN}'%s' ${RESET}\n" "$indent" "$cmd"
-          printf "%s    ↳ ${CYAN}%s${RESET} -- %s\n" "$indent" "$cmd" "$description"
-          return 0
-          ;;
-    esac
-
-    if [[ "$cmd" == "esac" ]]; then
-        printf "%s├─ Detected BASH Keyword ${CYAN}'%s' ${RESET}\n" "$indent" "$cmd"
-           printf "%s    ↳ ${CYAN}%s${RESET} -- Ends a case statement.\n" "$indent" "$cmd"
-        return 0
-    fi
-
-    if [[ "$cmd" == "}" ]]; then
-        printf "%s├─ Detected BASH Keyword ${CYAN}'%s' ${RESET}\n" "$indent" "$cmd"
-           printf "%s    ↳ ${CYAN}%s${RESET} -- Ends a group of commands in a block.\n" "$indent" "$cmd"
-        return 0
-    fi
-    
-    # -------------------------------------------------------------------------
-    # Handle "builtin", "command", and "wait" 
-    # -------------------------------------------------------------------------
-    if [[ "$cmd" == "builtin" || "$cmd" == "command" || "$cmd" == "wait" ]]; then    
-        if (( ${#fcmd[@]} == 1 )); then
-            printf "%s├─ Detected builtin ${CYAN}'%s' ${RESET}with no command\n" "$indent" "$cmd"
-            printf "%s    ↳ Showing  ${CYAN}'help %s'${RESET}:\n\n" "$indent" "$cmd"
-            help "$cmd" 2>/dev/null | sed 's/^/    /'
-            return 0
-        fi
-
-        # Strip wrapper and skip any flags (e.g., -n)
-        local subcmd=("${fcmd[@]:1}")
-        while [[ "${subcmd[0]}" == -* ]]; do
-            subcmd=("${subcmd[@]:1}")
-        done
-
-        printf "%s├─ Detected ${CYAN}'%s'${RESET} wrapper\n" "$indent" "$cmd"
-        printf "%s    ↳ Showing  ${CYAN}'help %s'${RESET}:\n\n" "$indent" "$subcmd"
-        help "$subcmd" 2>/dev/null | sed 's/^/    /'
-        return 0    
-    fi
-
-    # -------------------------------------------------------------------------
     # Detect command type
     # -------------------------------------------------------------------------
     ctype=$(type -t -- "$cmd" 2>/dev/null)
     if [[ -z "$ctype" ]]; then
         printf "%s├─ ${RED}Unknown or invalid command:${CYAN} '%s'${RESET}\n" "$indent" "$cmd"
         printf "%s    ↳ Check your spelling and try again\n\n" "$indent" 
+        export OLD_PATH
         return 1
     fi
 
     # -------------------------------------------------------------------------
-    # Builtins
+    # Handle keywords and provide help statements
     # -------------------------------------------------------------------------
-    if [[ "$ctype" == "builtin" ]]; then
-        printf "%s├─ ${CYAN}'%s'${RESET} is a shell builtin\n" "$indent" "$cmd"
-
-        # Determine whether builtin is enabled or disabled
-        local enabled_state="enabled"
-        if enable -p 2>/dev/null | grep -qE "^-n ${cmd}\b"; then
-            enabled_state="disabled"
-        fi
-
-        # Determine whether builtin is a loadable one (from a .so)
-        local origin="Core Bash builtin"
-        local builtin_info
-        builtin_info="$(enable -p "$cmd" 2>/dev/null)"
-        if [[ "$builtin_info" =~ -f[[:space:]]+([^[:space:]]+) ]]; then
-            origin="Loadable builtin → ${BASH_REMATCH[1]}"
+    if [[ "$ctype" == "keyword" ]]; then
+        if [[ "$cmd" == "if" || "$cmd" == "case" ||  "$cmd" == "for" || "$cmd" == "select" || "$cmd" == "while" || "$cmd" == "until" || "$cmd" == "function" || "$cmd" == "time" || "$cmd" == "{" || "$cmd" == "[[" || "$cmd" == "coproc" ]]; then
+    
+             printf "%s├─ Detected BASH Keyword ${CYAN}'%s' ${RESET}\n" "$indent" "$cmd"
+             printf "%s    ↳ Showing  ${CYAN}'help %s'${RESET}:\n\n" "$indent" "$cmd"
+             help "$cmd" 2>/dev/null | sed 's/^/    /'
+             return 0
         fi
     
-        printf "%s    ↳ Status: Shell builtin is ${CYAN}%s${RESET}\n" "$indent" "$enabled_state"
-        printf "%s    ↳ Source:  ${CYAN}%s${RESET}\n" "$indent" "$origin"
-        printf "%s    ↳ Showing ${CYAN}'help %s'${RESET}:\n\n" "$indent" "$cmd"
-        help "$cmd" 2>/dev/null | sed "s/^/$indent        /"
-        return 0
+        case "$cmd" in
+            then|else|elif|fi|do|done|in|!|])
+                description=""
+                case "$cmd" in
+                    then) description="Begins the command block for a true condition." ;;
+                    else) description="Begins the command block if the condition is false." ;;
+                    elif) description="Introduces a new condition if the previous one is false." ;;
+                    fi)   description="Ends an if statement." ;;
+                    do)   description="Begins the body of a loop or conditional block." ;;
+                    done) description="Ends the body of a loop or conditional block." ;;
+                    in)   description="Specifies the list to iterate over in a loop." ;;
+                    !)    description="Negates the exit status of a command or pipeline." ;;
+                esac
+            printf "%s├─ Detected BASH Keyword ${CYAN}'%s' ${RESET}\n" "$indent" "$cmd"
+            printf "%s    ↳ ${CYAN}%s${RESET} -- %s\n" "$indent" "$cmd" "$description"
+            return 0
+            ;;
+        esac
+
+        if [[ "$cmd" == "esac" ]]; then
+            printf "%s├─ Detected BASH Keyword ${CYAN}'%s' ${RESET}\n" "$indent" "$cmd"
+            printf "%s    ↳ ${CYAN}%s${RESET} -- Ends a case statement.\n" "$indent" "$cmd"
+            return 0
+        fi
+
+        if [[ "$cmd" == "}" ]]; then
+            printf "%s├─ Detected BASH Keyword ${CYAN}'%s' ${RESET}\n" "$indent" "$cmd"
+            printf "%s    ↳ ${CYAN}%s${RESET} -- Ends a group of commands in a block.\n" "$indent" "$cmd"
+            return 0
+        fi
+      
+        if [[ "$cmd" == "]" ]]; then
+            printf "%s├─ Detected BASH Keyword ${CYAN}'%s' ${RESET}\n" "$indent" "$cmd"
+            printf "%s    ↳ ${CYAN}%s${RESET} -- Ends a conditional test expression.\n" "$indent" "$cmd"
+            return 0
+        fi
     fi
+
+# -------------------------------------------------------------------------
+# Builtins
+# -------------------------------------------------------------------------
+if [[ "$ctype" == "builtin" ]]; then
+    
+    # Special builtins: `builtin` and `command`
+    if [[ "$cmd" == "builtin" || "$cmd" == "command" ]]; then    
+        
+        # Case: user typed plain `builtin` or `command`
+        if (( ${#fcmd[@]} == 1 )); then
+            printf "%s├─ Detected builtin ${CYAN}'%s' ${RESET}with no command\n" \
+                "$indent" "$cmd"
+            printf "%s    ↳ Showing  ${CYAN}'help %s'${RESET}:\n\n" \
+                "$indent" "$cmd"
+            help "$cmd" 2>/dev/null | sed 's/^/    /'
+            return 0
+        fi
+
+        # Strip wrapper and skip flags
+        local subcmd=("${fcmd[@]:1}")
+        while [[ "${subcmd[0]}" == -* ]]; do
+            subcmd=("${subcmd[@]:1}")
+        done
+
+        printf "%s├─ Detected ${CYAN}'%s'${RESET} wrapper\n" "$indent" "$cmd"
+        printf "%s    ↳ Showing  ${CYAN}'help %s'${RESET}:\n\n" \
+            "$indent" "${subcmd[0]}"
+
+        help "${subcmd[0]}" 2>/dev/null | sed 's/^/    /'
+        return 0    
+    fi
+    
+    # Normal builtin
+    printf "%s├─ ${CYAN}'%s'${RESET} is a shell builtin\n" "$indent" "$cmd"
+
+    # Enabled/disabled
+    local enabled_state="enabled"
+    if enable -p 2>/dev/null | grep -qE "^-n ${cmd}\b"; then
+        enabled_state="disabled"
+    fi
+    printf "%s    ↳ Status: Shell builtin is ${CYAN}%s${RESET}\n" \
+        "$indent" "$enabled_state"
+
+    # Loadable builtins
+    local origin="Core Bash builtin"
+    while read -r loaded; do
+        # format: enable -f PATH NAME
+        builtin_name="${loaded##* }"
+        if [[ "$builtin_name" == "$cmd" ]]; then
+            origin="Loadable builtin ($loaded)"
+            break
+        fi
+    done < <(enable -a | grep '^enable -f ' || true)
+
+    printf "%s    ↳ Source:  ${CYAN}%s${RESET}\n" "$indent" "$origin"
+
+
+    # Show help
+    printf "%s    ↳ Showing ${CYAN}'help %s'${RESET}:\n\n" \
+        "$indent" "$cmd"
+    help "$cmd" 2>/dev/null | sed "s/^/$indent        /"
+
+    # Recurse
+    local nextcmd=("${fcmd[@]:1}")
+    if (( ${#nextcmd[@]} > 0 )); then
+        h "${nextcmd[*]}" $((depth + 1))
+    fi
+
+    return 0
+fi
         
     # -------------------------------------------------------------------------
     # Functions
@@ -303,8 +313,7 @@ h() {
         
         read _ line file <<< "$(declare -F "$cmd")"
 
-        # Restore extdebug state if we enabled it
-        (( !was_extdebug )) && shopt -u extdebug
+        (( !was_extdebug )) && shopt -u extdebug  # Restore extdebug state if we enabled it
         #---------------------------- 
         
         printf "%s├─ ${CYAN}'%s' ${RESET}is a shell function\n" "$indent" "$cmd"
@@ -312,8 +321,7 @@ h() {
         printf "%s    ↳ Showing function: ${CYAN}%s${RESET}\n\n"  "$indent" "$cmd"        
         func_content=$(declare -f "$cmd")
         _highlight_script "$func_content" "$indent"
-        printf "\n%s    ─── End of function '%s' ───\n" "$indent" "$cmd"
-        
+        printf "\n%s    ─── End of function '%s' ───\n" "$indent" "$cmd"    
         return 0
     fi
     
@@ -341,21 +349,21 @@ h() {
         local line_number
         
         _sourcedtree
-    
+        
+        #----------------------------
         # Enable nullglob temporarily 
         local nullglob_was=0
         shopt -q nullglob && nullglob_was=1 || shopt -s nullglob      
-            for file in ${SOURCED_FILES_LIST[@]}; do 
-                 [[ -r "$file" ]] || continue
-                if grep -qE "^[[:space:]]*alias[[:space:]]+${cmd}=" "$file"; then
-                    found_location="$file"
-                    line_number=$(grep -nE "^[[:space:]]*alias[[:space:]]+$cmd=" "$file" | head -n1 | cut -d: -f1)
-                    printf "%s    ↳ Defined in: ${CYAN}%s (line %s)${RESET}\n" "$indent" "$file" "$line_number"
- 
-                fi
-            done  
-        # Restore nullglob state if we enabled it
-        (( !nullglob_was )) && shopt -u nullglob
+        for file in ${SOURCED_FILES_LIST[@]}; do 
+             [[ -r "$file" ]] || continue
+             if grep -qE "^[[:space:]]*alias[[:space:]]+${cmd}=" "$file"; then
+                found_location="$file"
+                line_number=$(grep -nE "^[[:space:]]*alias[[:space:]]+$cmd=" "$file" | head -n1 | cut -d: -f1)
+                printf "%s    ↳ Defined in: ${CYAN}%s (line %s)${RESET}\n" "$indent" "$file" "$line_number"
+             fi
+        done
+        (( !nullglob_was )) && shopt -u nullglob           # Restore nullglob state if we enabled it
+        #----------------------------
         
         if [[ -z "$found_location" ]]; then
             printf "%s    ↳ Defined manually in shell, or a custom location.\n" "$indent"
@@ -401,228 +409,230 @@ h() {
     # -------------------------------------------------------------------------
     # External commands
     # -------------------------------------------------------------------------
-    cmd_path=$(command -v "$cmd") || { 
-        printf "%s${RED}Command not found: '%s'${RESET}\n" "$indent" "$cmd"
-        return 1
-    }
-    local cmd_real formatted_type             
-    cmd_real=$(readlink -f "$cmd_path" 2>/dev/null || echo "$cmd_path")
-    file_info=$(file -b "$cmd_real")
+    if [[ "$ctype" == "file" ]]; then 
+        cmd_path=$(command -v "$cmd") || { 
+            printf "%s${RED}Command not found: '%s'${RESET}\n" "$indent" "$cmd"
+            return 1
+        }
+        local cmd_real formatted_type             
+        cmd_real=$(readlink -f "$cmd_path" 2>/dev/null || echo "$cmd_path")
+        file_info=$(file -b "$cmd_real")
 
-    # Replace commas with newlines for clarity, but keep first line aligned
-    formatted_type=$(printf "%s" "$file_info" | sed -E $'s/, interpreter/\\\ninterpreter/g; s/, version/\\\nversion/g; s/, dynamically/\\\ndynamically/g; s/, BuildID/\\\nBuildID/g; s/, for /\\\nfor /g')
+        # Replace commas with newlines for clarity, but keep first line aligned
+        formatted_type=$(printf "%s" "$file_info" | sed -E $'s/, interpreter/\\\ninterpreter/g; s/, version/\\\nversion/g; s/, dynamically/\\\ndynamically/g; s/, BuildID/\\\nBuildID/g; s/, for /\\\nfor /g')
         
-    printf "%s├─ ${CYAN}'%s' ${RESET}is an external command\n" "$indent" "$cmd"
-    printf "%s    ↳ Path: ${CYAN}%s${RESET}\n" "$indent" "$cmd_path"    
+        printf "%s├─ ${CYAN}'%s' ${RESET}is an external command\n" "$indent" "$cmd"
+        printf "%s    ↳ Path: ${CYAN}%s${RESET}\n" "$indent" "$cmd_path"    
   
-    if [[ "$cmd_real" != "$cmd_path" ]]; then # && \
-        printf "%s    ↳ ${YELLOW}Symbolic link ${RESET}to: ${YELLOW}%s${RESET}\n" "$indent" "$cmd_real"
-        cmd_path="$cmd_real"
-        printf "%s    ↳ Now Examining: ${BPURP}%s${RESET}\n" "$indent" "$cmd_real"
-    fi
-
-    # -------------------------- 
-    # Root privilege detection (enhanced)
-    # --------------------------- 
-    local requires_root=0
-    local root_reason=""
-
-    # 1. Check for setuid root
-    if [[ -u "$cmd_path" && $(stat -c '%U' "$cmd_path" 2>/dev/null) == "root" ]]; then
-        requires_root=1
-        root_reason="setuid root binary"
-
-    # 2. Check capabilities with getcap
-    elif command -v getcap &>/dev/null; then
-        local caps
-        caps=$(getcap "$cmd_path" 2>/dev/null)
-        if [[ "$caps" =~ (cap_sys_admin|cap_dac_override|cap_net_admin) ]]; then
-            requires_root=1
-            root_reason="binary grants elevated capabilities (getcap)"
+        if [[ "$cmd_real" != "$cmd_path" ]]; then # && \
+            printf "%s    ↳ ${YELLOW}Symbolic link ${RESET}to: ${YELLOW}%s${RESET}\n" "$indent" "$cmd_real"
+            cmd_path="$cmd_real"
+            printf "%s    ↳ Now Examining: ${BPURP}%s${RESET}\n" "$indent" "$cmd_real"
         fi
-    fi
 
-    # 3. Check capabilities using capsh if available
-    if (( !requires_root )) && command -v capsh &>/dev/null; then(
-        local cap_info
-        cap_info=$(capsh --print 2>/dev/null)
+        # -------------------------- 
+        # Root privilege detection (enhanced)
+        # --------------------------- 
+        local requires_root=0
+        local root_reason=""
+
+        # 1. Check for setuid root
+        if [[ -u "$cmd_path" && $(stat -c '%U' "$cmd_path" 2>/dev/null) == "root" ]]; then
+            requires_root=1
+            root_reason="setuid root binary"
+
+        # 2. Check capabilities with getcap
+        elif command -v getcap &>/dev/null; then
+            local caps
+            caps=$(getcap "$cmd_path" 2>/dev/null)
+            if [[ "$caps" =~ (cap_sys_admin|cap_dac_override|cap_net_admin) ]]; then
+                requires_root=1
+                root_reason="binary grants elevated capabilities (getcap)"
+            fi
+        fi
+
+        # 3. Check capabilities using capsh if available
+        if (( !requires_root )) && command -v capsh &>/dev/null; then(
+            local cap_info
+            cap_info=$(capsh --print 2>/dev/null)
     
-        if [[ "$cap_info" =~ "Current:" ]]; then
-            if [[ "$cap_info" =~ (cap_sys_admin|cap_dac_override|cap_net_admin) ]]; then
-                requires_root=1
-                root_reason="binary requires elevated capabilities (capsh)"
+            if [[ "$cap_info" =~ "Current:" ]]; then
+                if [[ "$cap_info" =~ (cap_sys_admin|cap_dac_override|cap_net_admin) ]]; then
+                    requires_root=1
+                    root_reason="binary requires elevated capabilities (capsh)"
+                fi
+            fi)
+        fi
+
+        # 4. Known admin commands
+        if (( !requires_root )); then
+            local root_cmds=(mount umount reboot shutdown halt ifconfig iptables ip systemctl journalctl modprobe insmod rmmod fdisk mkfs losetup parted fsck useradd userdel passwd chown chmod service sysctl visudo fstrim swapoff swapon update-grub grub-installg disk parted blkid update-initramfs)
+            for rcmd in "${root_cmds[@]}"; do
+                if [[ "$cmd" == "$rcmd" ]]; then
+                    requires_root=1
+                    root_reason="known administrative command"
+                    break
+                fi
+            done
+        fi
+
+        # 5. Display result
+        if (( requires_root )); then
+            printf "%s    ↳ Requires root privileges: ${YELLOW}Yes (%s)${RESET}\n" "$indent" "$root_reason"
+        else
+            printf "%s    ↳ Requires root privileges: ${CYAN}No${RESET}\n" "$indent"
+        fi
+
+        # -------------------------- 
+        # Detect Executable Type
+        # -------------------------- 
+        if grep -qi 'ELF' <<< "$file_info"; then
+            if grep -qi 'statically linked' <<< "$file_info"; then
+                printf "%s    ↳ Executable Type: ELF binary - Statically linked\n" "$indent"
+                while IFS= read -r line; do
+                    printf "%s    ⎟    ${CYAN}%s${RESET}\n" "$indent" "$line"
+                done <<< "$formatted_type"
+            else
+                printf "%s    ↳ Executable Type: ELF binary - Dynamically linked\n" "$indent"  
+                while IFS= read -r line; do
+                    printf "%s    ⎟    ${CYAN}%s${RESET}\n" "$indent" "$line"
+                done <<< "$formatted_type"  
             fi
-        fi)
-    fi
 
-    # 4. Known admin commands
-    if (( !requires_root )); then
-        local root_cmds=(mount umount reboot shutdown halt ifconfig iptables ip systemctl journalctl modprobe insmod rmmod fdisk mkfs losetup parted fsck useradd userdel passwd chown chmod service sysctl visudo fstrim swapoff swapon update-grub grub-installg disk parted blkid update-initramfs)
-        for rcmd in "${root_cmds[@]}"; do
-            if [[ "$cmd" == "$rcmd" ]]; then
-                requires_root=1
-                root_reason="known administrative command"
-                break
+        elif grep -qi 'script\|text executable' <<< "$file_info"; then
+            printf "%s    ↳ Executable Type: ${CYAN}Script / Text executable${RESET}\n" "$indent"
+
+            local first_line interp
+            first_line=$(head -n1 "$cmd_path")
+
+            if [[ "$first_line" =~ ^#! ]]; then
+                interp="${first_line#\#!}"        # remove shebang (#!)
+                interp="${interp#"${interp%%[![:space:]]*}"}"  # trim leading whitespace
+                while IFS= read -r line; do
+                    printf "%s    ⎟    ${CYAN}%s${RESET}\n" "$indent" "$line"
+                done <<< "$formatted_type"       
             fi
-        done
-    fi
-
-    # 5. Display result
-    if (( requires_root )); then
-        printf "%s    ↳ Requires root privileges: ${YELLOW}Yes (%s)${RESET}\n" "$indent" "$root_reason"
-    else
-        printf "%s    ↳ Requires root privileges: ${CYAN}No${RESET}\n" "$indent"
-    fi
-
-    # -------------------------- 
-    # Detect Executable Type
-    # -------------------------- 
-    if grep -qi 'ELF' <<< "$file_info"; then
-        if grep -qi 'statically linked' <<< "$file_info"; then
-            printf "%s    ↳ Executable Type: ELF binary - Statically linked\n" "$indent"
+            printf "%s    ↳ Interpreter: ${CYAN}%s${RESET}\n" "$indent" "$interp"
+        else
+            printf "%s    ↳ Executable Type: Unknown\n" "$indent"
             while IFS= read -r line; do
                 printf "%s    ⎟    ${CYAN}%s${RESET}\n" "$indent" "$line"
             done <<< "$formatted_type"
-        else
-            printf "%s    ↳ Executable Type: ELF binary - Dynamically linked\n" "$indent"  
-            while IFS= read -r line; do
-                printf "%s    ⎟    ${CYAN}%s${RESET}\n" "$indent" "$line"
-            done <<< "$formatted_type"  
+            printf "%s    ⎟       ${YELLOW}%s${RESET}\n" "$indent" "$file_info"
         fi
-
-    elif grep -qi 'script\|text executable' <<< "$file_info"; then
-        printf "%s    ↳ Executable Type: ${CYAN}Script / Text executable${RESET}\n" "$indent"
-
-        local first_line interp
-        first_line=$(head -n1 "$cmd_path")
-
-        if [[ "$first_line" =~ ^#! ]]; then
-            interp="${first_line#\#!}"        # remove shebang (#!)
-            interp="${interp#"${interp%%[![:space:]]*}"}"  # trim leading whitespace
-            while IFS= read -r line; do
-                printf "%s    ⎟    ${CYAN}%s${RESET}\n" "$indent" "$line"
-            done <<< "$formatted_type"       
-        fi
-        printf "%s    ↳ Interpreter: ${CYAN}%s${RESET}\n" "$indent" "$interp"
-    else
-        printf "%s    ↳ Executable Type: Unknown\n" "$indent"
-        while IFS= read -r line; do
-            printf "%s    ⎟    ${CYAN}%s${RESET}\n" "$indent" "$line"
-        done <<< "$formatted_type"
-        printf "%s    ⎟       ${YELLOW}%s${RESET}\n" "$indent" "$file_info"
-    fi
    
-    # Get dependencies
-    deps=$(ldd "$cmd_path" 2>/dev/null | sed 's/^[[:space:]]*//')
-    if [[ -n "$deps" ]]; then
-        printf "%s    ↳ Dependencies:\n" "$indent" 
-        local unmet_found=0
-        while IFS= read -r line; do
-            if [[ "$line" =~ "not found" ]]; then
-                unmet_found=1
-                printf "%s    ⎟    ${RED}%s${RESET}\n" "$indent" "$line"
-            else
-                printf "%s    ⎟    ${CYAN}%s${RESET}\n" "$indent" "$line"
+        # Get dependencies
+        deps=$(ldd "$cmd_path" 2>/dev/null | sed 's/^[[:space:]]*//')
+        if [[ -n "$deps" ]]; then
+            printf "%s    ↳ Dependencies:\n" "$indent" 
+            local unmet_found=0
+            while IFS= read -r line; do
+                if [[ "$line" =~ "not found" ]]; then
+                    unmet_found=1
+                    printf "%s    ⎟    ${RED}%s${RESET}\n" "$indent" "$line"
+                else
+                    printf "%s    ⎟    ${CYAN}%s${RESET}\n" "$indent" "$line"
+                fi
+            done <<< "$deps"
+            (( unmet_found )) && printf "%s        ↳ ${RED}⚠ Some dependencies are missing!${RESET}\n" "$indent"
+        fi
+
+        # Package info---------------
+        local pkg_name
+        local pkg_lines=()
+
+        if command -v dpkg &>/dev/null; then
+            pkg_name=$(dpkg -S "$cmd_path" 2>/dev/null | cut -d: -f1 | head -n1)
+
+            if [[ -n "$pkg_name" ]]; then
+                # Read apt show output line by line
+                while IFS= read -r line; do
+                    pkg_lines+=("$line")
+                done < <(apt show "$pkg_name" 2>/dev/null | grep -E 'Package:|Version:|Maintainer:|Description:'| awk -F': ' '{print $2}')
+
+                # Display each line with custom formatting
+                printf "%s    ↳ Package Info:\n" "$indent"
+                printf "%s    ⎟    Package: ${CYAN}%s${RESET}\n" "$indent" "${pkg_lines[0]}"
+                printf "%s    ⎟    Version: ${CYAN}%s${RESET}\n" "$indent" "${pkg_lines[1]}"
+                printf "%s    ⎟    Maintainer: ${CYAN}%s${RESET}\n" "$indent" "${pkg_lines[2]}"
+                printf "%s    ⎟    Description: ${CYAN}%s${RESET}\n" "$indent" "${pkg_lines[3]}"
             fi
-        done <<< "$deps"
-        (( unmet_found )) && printf "%s        ↳ ${RED}⚠ Some dependencies are missing!${RESET}\n" "$indent"
-    fi
-
-    # Package info---------------
-    local pkg_name
-    local pkg_lines=()
-
-    if command -v dpkg &>/dev/null; then
-        pkg_name=$(dpkg -S "$cmd_path" 2>/dev/null | cut -d: -f1 | head -n1)
-
-        if [[ -n "$pkg_name" ]]; then
-            # Read apt show output line by line
-            while IFS= read -r line; do
-                pkg_lines+=("$line")
-            done < <(apt show "$pkg_name" 2>/dev/null | grep -E 'Package:|Version:|Maintainer:|Description:'| awk -F': ' '{print $2}')
-
-            # Display each line with custom formatting
-            printf "%s    ↳ Package Info:\n" "$indent"
-            printf "%s    ⎟    Package: ${CYAN}%s${RESET}\n" "$indent" "${pkg_lines[0]}"
-            printf "%s    ⎟    Version: ${CYAN}%s${RESET}\n" "$indent" "${pkg_lines[1]}"
-            printf "%s    ⎟    Maintainer: ${CYAN}%s${RESET}\n" "$indent" "${pkg_lines[2]}"
-            printf "%s    ⎟    Description: ${CYAN}%s${RESET}\n" "$indent" "${pkg_lines[3]}"
-        fi
-    fi
-
-    # -----------------------------
-    # Get and display file permissions
-    if [[ -x "$cmd_path" ]]; then
-        local perms octal owner_grp owner_perm group_perm other_perm
-        # Using stat for symbolic and octal
-        if stat --version &>/dev/null; then
-            perms=$(stat -c "%A" "$cmd_path")      # symbolic: -rwxr-xr-x
-            octal=$(stat -c "%a" "$cmd_path")      # numeric: 755
-            owner_grp=$(stat -c "%U:%G" "$cmd_path") # owner:group
-            owner_perm=$(stat -c "%A" "$cmd_path" | cut -c2-4)   # owner bits
-            group_perm=$(stat -c "%A" "$cmd_path" | cut -c5-7)   # group bits
-            other_perm=$(stat -c "%A" "$cmd_path" | cut -c8-10)  # others bits
         fi
 
-        printf "%s    ↳ Permissions: ${CYAN}%s${RESET} (octal: ${CYAN}%s${RESET})\n" "$indent" "$perms" "$octal"
-        printf "%s    ⎟    ↳ Owner/Group: ${CYAN}%s${RESET}\n" "$indent" "$owner_grp"
-        printf "%s    ⎟    ↳ Owner: ${CYAN}%s${RESET}  Group: ${CYAN}%s${RESET}  Others: ${CYAN}%s${RESET}\n" \
+        # -----------------------------
+        # Get and display file permissions
+        if [[ -x "$cmd_path" ]]; then
+            local perms octal owner_grp owner_perm group_perm other_perm
+            # Using stat for symbolic and octal
+            if stat --version &>/dev/null; then
+                perms=$(stat -c "%A" "$cmd_path")      # symbolic: -rwxr-xr-x
+                octal=$(stat -c "%a" "$cmd_path")      # numeric: 755
+                owner_grp=$(stat -c "%U:%G" "$cmd_path") # owner:group
+                owner_perm=$(stat -c "%A" "$cmd_path" | cut -c2-4)   # owner bits
+                group_perm=$(stat -c "%A" "$cmd_path" | cut -c5-7)   # group bits
+                other_perm=$(stat -c "%A" "$cmd_path" | cut -c8-10)  # others bits
+            fi
+
+            printf "%s    ↳ Permissions: ${CYAN}%s${RESET} (octal: ${CYAN}%s${RESET})\n" "$indent" "$perms" "$octal"
+            printf "%s    ⎟    ↳ Owner/Group: ${CYAN}%s${RESET}\n" "$indent" "$owner_grp"
+            printf "%s    ⎟    ↳ Owner: ${CYAN}%s${RESET}  Group: ${CYAN}%s${RESET}  Others: ${CYAN}%s${RESET}\n" \
             "$indent" "$owner_perm" "$group_perm" "$other_perm"
-    fi
+            fi
    
-    # Show script contents if text executable
-    if [[ "$file_info" == *"script"* || "$file_info" == *"text executable"* ]]; then
-        printf "%s    ↳ Showing script ${CYAN}'%s'${RESET}:\n\n" "$indent" "$cmd"
-        if [[ -r "$cmd_path" ]]; then
-            _highlight_script "$cmd_path" "$indent"
-            printf "\n\n%s    ─── End of script '%s' ───\n" "$indent" "$cmd"
+        # Show script contents if text executable
+        if [[ "$file_info" == *"script"* || "$file_info" == *"text executable"* ]]; then
+            printf "%s    ↳ Showing script ${CYAN}'%s'${RESET}:\n\n" "$indent" "$cmd"
+            if [[ -r "$cmd_path" ]]; then
+                _highlight_script "$cmd_path" "$indent"
+                printf "\n\n%s    ─── End of script '%s' ───\n" "$indent" "$cmd"
+            fi
+            return 0
         fi
-        return 0
-    fi
     
     # Show help for external commands 
-    local output cmdname hout
-    local output_shown=0 
-    local help_flags=(--help -help -h "-?") 
-    cmdname=$(basename "$cmd_path")
+        local output cmdname hout
+        local output_shown=0 
+        local help_flags=(--help -help -h "-?") 
+        cmdname=$(basename "$cmd_path")
 
-    for flag in "${help_flags[@]}"; do
-        if output=$("$cmd_path" "$flag" 2>&1); then
-            if [[ -n "$output" ]]; then
-                printf "%s    ↳ Showing${CYAN} '%s %s'${RESET}:\n\n" "$indent" "$cmdname" "$flag"
-                printf "%s\n\n" "$output" | sed "s/^/$indent         /"
-                output_shown=1
-                break
+        for flag in "${help_flags[@]}"; do
+            if output=$("$cmd_path" "$flag" 2>&1); then
+                if [[ -n "$output" ]]; then
+                    printf "%s    ↳ Showing${CYAN} '%s %s'${RESET}:\n\n" "$indent" "$cmdname" "$flag"
+                    printf "%s\n\n" "$output" | sed "s/^/$indent         /"
+                    output_shown=1
+                    break
+                fi
+            fi
+        done
+
+        # Fallback if no help output was shown
+        if (( output_shown == 0 )); then
+            local cmd_only="${cmd_path##*/}"
+            if command -v man &>/dev/null && man -w "$cmd_only" &>/dev/null; then
+                printf "%s    ↳ Manual available via${CYAN} 'man %s'${RESET}\n" "$indent" "$cmd_only"
+            elif command -v info &>/dev/null && info "$cmd_only" &>/dev/null; then
+                printf "%s    ↳ Info page available via ${CYAN}'info %s'${RESET}\n" "$indent" "$cmd_only"
+            else 
+                hout=$(help "$cmd" 2>&1)
+                # Filter known useless help output
+                if [[ -n "$hout" && ! "$hout" =~ [Nn]o[[:space:]]help[[:space:]]topics ]]; then
+                    printf "%s    ↳ Showing${CYAN} 'help %s'${RESET}:\n\n" "$indent" "$cmd"
+                    printf "%s\n" "$hout" | sed "s/^/$indent        /"
+                else
+                    printf "%s    ↳ ${RED}No help found for ${CYAN}'%s'${RESET}\n" "$indent" "$cmd_only"
+                fi
             fi
         fi
-    done
 
-    # Fallback if no help output was shown
-    if (( output_shown == 0 )); then
-        local cmd_only="${cmd_path##*/}"
-        if command -v man &>/dev/null && man -w "$cmd_only" &>/dev/null; then
-            printf "%s    ↳ Manual available via${CYAN} 'man %s'${RESET}\n" "$indent" "$cmd_only"
-        elif command -v info &>/dev/null && info "$cmd_only" &>/dev/null; then
-            printf "%s    ↳ Info page available via ${CYAN}'info %s'${RESET}\n" "$indent" "$cmd_only"
-        else 
-            hout=$(help "$cmd" 2>&1)
-            # Filter known useless help output
-            if [[ -n "$hout" && ! "$hout" =~ [Nn]o[[:space:]]help[[:space:]]topics ]]; then
-                printf "%s    ↳ Showing${CYAN} 'help %s'${RESET}:\n\n" "$indent" "$cmd"
-                printf "%s\n" "$hout" | sed "s/^/$indent        /"
-            else
-                printf "%s    ↳ ${RED}No help found for ${CYAN}'%s'${RESET}\n" "$indent" "$cmd_only"
-            fi
+        local next_cmd=("${fcmd[@]:1}")
+        if (( ${#next_cmd[@]} > 0 )); then
+            h "${next_cmd[*]}" $((depth + 1))
         fi
-    fi
-
-    local next_cmd=("${fcmd[@]:1}")
-    if (( ${#next_cmd[@]} > 0 )); then
-        h "${next_cmd[*]}" $((depth + 1))
-    fi
     
-    export OLD_PATH 
-    return 0
+        export OLD_PATH 
+        return 0
+    fi
 }
 
 #-------------------------------------------------------------------------------------------------
@@ -650,9 +660,8 @@ _h-usage() {
 
      Features:
        • Handles builtins, aliases, keywords, functions, and external commands
-       • Detects symbolic links and script file contents
-       • Detects Shadowing of commands
-       • Shows --help/-h/-? output or points to man pages
+       • Syntax-highlighted preview of functions and scripts
+       • Shows --help/-help/-h/-? output or points to man pages
   
 EOF
 }
@@ -664,7 +673,7 @@ EOF
 _h-ver() {
     cat <<'EOF'
 
-     h v3.1.2 — Bash Command Analyzer
+     h v3.1.11 — Bash Command Analyzer
      Author : John Blair
      Updated: 2025-11-10  
           
@@ -804,7 +813,6 @@ _split_top_level_commands() {
         out+=("$(printf '%s' "$seg" | sed 's/[[:space:]]*$//')")
     fi
 }
-
 
 #--------------------------------------------------------------------------------------------
 # Function: _parse_commands
@@ -1230,7 +1238,7 @@ _overridden() {
     printf "\n"  
     _function_override
     printf "\n"  
-    _builtin_disable_check
+    _builtin_override
 }
 
 #-------------------------------------------------------------------------------------------------
@@ -1261,7 +1269,7 @@ _alias_override() {
                     printf "%s    ↳ Alias ${YELLOW}%s${RESET} overrides a builtin of the same name.\n" "$indent" "$acmd"
                     flag=1 ;;
                 file)
-                    printf "%s    ↳ Alias ${YELLOW}%s${RESET} overrides atleast one external command of the same name.\n" "$indent" "$acmd"
+                    printf "%s    ↳ Alias ${YELLOW}%s${RESET} overrides at least one external command of the same name.\n" "$indent" "$acmd"
                     flag=1 ;;
             esac
         done
@@ -1301,7 +1309,7 @@ _function_override() {
                     func_flag=1
                     ;;
                 file)
-                    printf "%s    ↳ Function ${YELLOW}%s${RESET} overrides atleast one external command of the same name.\n" "$indent" "$funcmd"
+                    printf "%s    ↳ Function ${YELLOW}%s${RESET} overrides at least one external command of the same name.\n" "$indent" "$funcmd"
                     func_flag=1
                     ;;
             esac
@@ -1314,11 +1322,11 @@ _function_override() {
 }
 
 #-------------------------------------------------------------------------------------------------
-# Function: _builtin_disable_check
+# Function: _builtin_override
 # Purpose : list builtins that are disabled and note if external commands replace them
 #-------------------------------------------------------------------------------------------------
-_builtin_disable_check() {
-    printf "%s├─ Checking for disabled builtins to detect overridden commands:\n" "$indent"
+_builtin_override() {
+    printf "%s├─ Examining disabled builtins to identify any replacement commands:\n" "$indent"
 
     local b disabled=()
 
@@ -1338,7 +1346,8 @@ _builtin_disable_check() {
 
         # 1. Alias replacement?
         if alias "$name" &>/dev/null; then
-            printf "%s       • Alias ${YELLOW}'%s'${RESET} now replaces the builtin.\n" "$indent" "$name"
+            adef=$(allias "$name")
+            printf "%s       • Alias ${YELLOW}'%s' -- '%s'${RESET} now replaces the builtin.\n" "$indent" "$name" "$adef"
             continue
         fi
 
@@ -1350,7 +1359,8 @@ _builtin_disable_check() {
 
         # 3. External command replacement?
         if command -v "$name" &>/dev/null; then
-            printf "%s       • External command ${YELLOW}'%s'${RESET} now replaces the builtin.\n" "$indent" "$name"
+            local newpath=$(command -v "$name")
+            printf "%s       • External command ${YELLOW}'%s' - '%s'${RESET} now replaces the builtin.\n" "$indent" "$name" "$newpath"
         else
             printf "%s       • No alias, function, or command replaces ${CYAN}'%s'${RESET}.\n" "$indent" "$name"
         fi

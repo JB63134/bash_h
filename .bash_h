@@ -183,13 +183,14 @@ h() {
     # Handle keywords and provide help statements
     # -------------------------------------------------------------------------
     if [[ "$ctype" == "keyword" ]]; then
-        if [[ "$cmd" == "if" || "$cmd" == "case" ||  "$cmd" == "for" || "$cmd" == "select" || "$cmd" == "while" || "$cmd" == "until" || "$cmd" == "function" || "$cmd" == "time" || "$cmd" == "{" || "$cmd" == "[[" || "$cmd" == "coproc" ]]; then
-    
-             printf "%s├─ Detected BASH Keyword ${CYAN}'%s' ${RESET}\n" "$indent" "$cmd"
-             printf "%s    ↳ Showing  ${CYAN}'help %s'${RESET}:\n\n" "$indent" "$cmd"
-             help "$cmd" 2>/dev/null | sed 's/^/    /'
-             return 0
-        fi
+        case "$cmd" in
+        if|case|for|select|while|until|function|time|{|[[|coproc)
+            printf "%s├─ Detected BASH Keyword ${CYAN}'%s' ${RESET}\n" "$indent" "$cmd"
+            printf "%s    ↳ Showing  ${CYAN}'help %s'${RESET}:\n\n" "$indent" "$cmd"
+            help "$cmd" 2>/dev/null | sed 's/^/    /'
+            return 0
+            ;;
+        esac
     
         case "$cmd" in
             then|else|elif|fi|do|done|in|!|])

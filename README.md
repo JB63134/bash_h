@@ -1,7 +1,7 @@
 
 📦 h — A Buggy (But Ambitious) Bash Command Analyzer
 
-h is very BASH specific, and Debian specific. Should work on Debian based distributions like Ubuntu, and Linux Mint. h could be adapted to work with BSD style systems, MacOS, and systems that use other package managers. 
+h is very BASH specific, and Debian specific. Should work on Debian based distributions like Ubuntu, and Linux Mint. 
 
 h is a shell-command introspection tool that tells you what a command really is. Instead of relying on multiple tools (type, which, command -V, declare, alias, etc.), h unifies all resolution logic into a single command analysis engine.
 

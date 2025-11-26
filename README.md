@@ -1,9 +1,9 @@
 
 📦 h — A Buggy (But Ambitious) Bash Command Analyzer
 
-h is a shell-command introspection tool that tells you what a command really is. Instead of relying on multiple tools (type, which, command -V, declare, alias, etc.), h unifies all resolution logic into a single command analysis engine.
+h is very BASH specific, and Debian specific. Should work on Debian based distributions like Ubuntu, and Linux Mint.
 
-Right now, h is very BASH V4.2+ specific, and very Debian based.
+h is a shell-command introspection tool that tells you what a command really is. Instead of relying on multiple tools (type, which, command -V, declare, alias, etc.), h unifies all resolution logic into a single command analysis engine.
 
 🚀 Overview: Modern shells resolve commands through a layered chain: Alias → Function → Builtin → keyword → File in $PATH (Script / Binary).  h tries to walk this chain recursively, determining the true implementation of any command while providing relevent information and any available help.
 
@@ -27,7 +27,7 @@ Right now, h is very BASH V4.2+ specific, and very Debian based.
 
 ⚙️ ELF Binary Analysis Displays: architecture, dynamic vs static linking, ELF interpreter, (ld-linux) capabilities, SUID/SGID bits, owner & permissions, resolved real path  (follows symlinks), List all dependencies and identify missing dependencies. and provides help output by iterating through common flags '<command> --help -help -h -?' with a fallback to alert the user if a man page exists.
 
-📦 Package Lookup On Debian/Ubuntu systems: uses dpkg to display the package name, version,  maintainer info, and package description.
+📦 Package Lookup On Debian/Ubuntu/linux-Mint systems: uses dpkg to display the package name, version,  maintainer info, and package description.
 
 🛠️ Installation: Source .bash_h 
  
@@ -63,7 +63,7 @@ V2.0.0 was a small function using fc similar to this:
 V3.0.0
       I decided to rewrite h so that i could get help from multiple sources.
       Using common flags like '<command> --help', -help, -h, or -?.
-      For builtins and some keywords use 'help <command>' 
+      For builtins and some keywords use 'help "command"'
       As a fallback, checks if a man page exists and alerts the user.
       For aliases, functions and scripts - handle displaying contents.
       Then feature creep got away from me and Now I have this 1200+ line mess in BASH.

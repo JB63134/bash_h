@@ -9,7 +9,7 @@ and as a backup, h checks if a man page or an info page exists and alerts the us
 h is very BASH specific, and GNU specific. 
 
 Fully Works (native, no changes):
-All major Linux distros with GNU userland and Bash ≥ 4.3 such as:
+All major Linux distros with GNU userland and Bash ≥ 4.3 such as:  
 
 Debian / Ubuntu / Mint 
 Fedora / RHEL / Rocky
@@ -17,7 +17,7 @@ Arch / Manjaro / Endeavour
 openSUSE
 
 Works With Minor Fix (install GNU tools):
-macOS (Homebrew GNU tools + brew bash)
+macOS (Homebrew GNU tools + brew bash)  
 FreeBSD (pkg GNU tools + bash)
 
 --------------------------------------------------------------------------------------------

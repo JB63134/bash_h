@@ -15,7 +15,7 @@ Fedora / RHEL / Rocky
 Arch / Manjaro / Endeavour
 openSUSE
 
-Works With Minor Fix (install GNU tools):
+Works With Minor Fix (install GNU tools):  
 macOS (Homebrew GNU tools + brew bash)  
 FreeBSD (pkg GNU tools + bash)
 

@@ -152,7 +152,7 @@ ca() {
     if [[ "$cmd" == "h" ]]; then
             printf "%s├─ Detected ${CYAN}'%s' ${RESET}\n" "$indent" "$cmd"
             printf "%s    ↳ Showing  ${CYAN}'%s --help'${RESET}:\n\n"  "$indent" "$cmd"
-            _he-usage
+            _ca_usage
             export OLD_PATH
             return 0
     fi

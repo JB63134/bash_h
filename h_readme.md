@@ -21,15 +21,9 @@
 
 ## Installation
 
-Download `h.sh` and source it in your `.bashrc`:
+Download `.bash_h` and source it in your `.bashrc`:
 
 ```bash
-# Download
-curl -o ~/.local/bin/h.sh https://raw.githubusercontent.com/yourusername/h-bash-helper/main/h.sh
-
-# Make executable
-chmod +x ~/.local/bin/h.sh
-
 # Source in your shell
-echo 'source ~/.local/bin/h.sh' >> ~/.bashrc
+echo 'source ~/.bash_h' >> ~/.bashrc
 source ~/.bashrc

@@ -68,7 +68,7 @@ ca is a shell-command introspection tool that tells you what a command really is
 
 📜 Script Introspection: ca identifies shebang interpreter, real file location (follows symlinks), shows syntax-highlighted preview.  Supports: bash, sh, python, perl, ruby, node, awk, sed, and any #! file.
 
-📜 Builtin Introspection Shows: whether the builtin is enabled, whether it is a core builtin or loadable, and help via 'help <command>'
+📜 Builtin Introspection Shows: whether the builtin is enabled, whether it is a core builtin or loadable.
 
 ⚙️ ELF Binary Analysis Displays: architecture, dynamic vs static linking, ELF interpreter, (ld-linux) capabilities, SUID/SGID bits, owner & permissions, resolved real path  (follows symlinks), List all dependencies and identify missing dependencies. 
 

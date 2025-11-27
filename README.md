@@ -13,7 +13,10 @@
 - Detects Bash **keywords, builtins, aliases, functions, and external commands**  
 - Shows **where commands/aliases/functions are defined**  
 - Expands **aliases** and **environment variables**  
-- Displays `--help` or points to `man`/`info` pages  
+- Displays `--help` or points to `man`/`info` pages
+- Provides help output by iterating through common flags '<command> --help -help -h -?'
+- For edge cases, keywords without help info, a brief description is provided.
+- As a fallback, h checks if a man page or an info page exists and alerts the user.  
 - Syntax-highlights Bash **functions and scripts**  
 - Optional **FZF integration** for interactive selection  
 - Depth-safe analysis to prevent recursion loops  
@@ -24,15 +27,9 @@
 
 Download `.bash_h` and source it in your `.bashrc`:
 
-# Source in your shell
-echo 'source ~/.bash_h' >> ~/.bashrc
-source ~/.bashrc
+    echo 'source ~/.bash_h' >> ~/.bashrc
+    source ~/.bashrc
 
-
-Provides help output by iterating through common flags '<command> --help -help -h -?'  
-Provides help for builtins and keywords via help e.g 'help exit'  
-For edge cases, keywords without help info, a brief description is provided.  
-and as a backup, h checks if a man page or an info page exists and alerts the user.  
 
 h is very BASH specific, and GNU specific. 
 

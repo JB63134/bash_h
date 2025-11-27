@@ -584,64 +584,66 @@ _h_expand_path() {
 #------------------------------------------------------------------------
 _h_highlight_script() {
     local input="$1"
-    local indent="${2:-}"
-    local highlighted
-    local use_color=1
-    local esc=$'\x1b'
+    local indent="    "
 
-    # Disable color if stdout is not a terminal
-    [[ ! -t 1 ]] && use_color=0
-
-    # Read content safely
+    # Read file if it exists
+    local code
     if [[ -f "$input" ]]; then
-        highlighted=$(<"$input")
+        code=$(<"$input")
     else
-        highlighted="$input"
+        code="$input"
     fi
 
-    # Highlight patterns
-    declare -a HIGHLIGHT_PATTERNS=(
-        '#.*'                                 # comments
-        '"[^"]*"|'\''[^'\'']*'\'''            # strings
-        '\$\([^)]*\)|`[^`]*`'                 # subshells
-        '\b(local|declare|export|typeset)\b'  # declarations
-        '\b(if|then|else|elif|fi|for|while|do|done|until|select|case|esac|break|continue)\b' # control
-        '\b(function|return|exit|trap|shift|read|mapfile|set|unset)\b' # builtins
-        '\b(printf|echo|mkdir|find|grep|sed|awk|cut|sort|head|tail|xargs|cat|touch|chmod|chown|curl|wget)\b' # commands
-        '\$[A-Za-z0-9_@#*!?_-]+'             # variables
-        '\b[0-9]+(\.[0-9]+)?\b|0x[0-9A-Fa-f]+' # numbers
-        '\[\[|\]\]|\(\(|\)\)|\(|\)|\{|\}'     # brackets/parens/braces
-    )
+    perl - "$code" "$indent" <<'PERL_CODE'
+use strict;
+use warnings;
 
-    declare -a HIGHLIGHT_COLORS=(
-        "${esc}[36m"    # comments — cyan
-        "${esc}[96m"    # strings — bright cyan
-        "${esc}[35m"    # subshells — magenta
-        "${esc}[32m"    # declarations — green
-        "${esc}[93m"    # control — yellow
-        "${esc}[32m"    # builtins — green
-        "${esc}[35m"    # common commands — magenta
-        "${esc}[33m"    # variables — yellow
-        "${esc}[34m"    # numbers — blue
-        "${esc}[37m"    # brackets — gray
-    )
+my $content = $ARGV[0];
+my $indent = $ARGV[1] // "";
 
-    # Disable colors if needed
-    if (( use_color == 0 )); then
-        for i in "${!HIGHLIGHT_COLORS[@]}"; do
-            HIGHLIGHT_COLORS[$i]=""
-        done
-    fi
+# ANSI colors
+my %C = (
+    comment   => "\e[36m",
+    string    => "\e[96m",
+    subshell  => "\e[35m",
+    decl      => "\e[32m",
+    control   => "\e[93m",
+    builtin   => "\e[32m",
+    command   => "\e[35m",
+    variable  => "\e[33m",
+    number    => "\e[34m",
+    bracket   => "\e[37m",
+    reset     => "\e[0m",
+);
 
-    # Apply highlighting patterns
-    for i in "${!HIGHLIGHT_PATTERNS[@]}"; do
-        local pattern="${HIGHLIGHT_PATTERNS[$i]}"
-        local color="${HIGHLIGHT_COLORS[$i]}"
-        highlighted=$(echo "$highlighted" | sed -E "s/($pattern)/${color}\1${esc}[0m/g")
-    done
+# Patterns for syntax highlighting
+my @patterns = (
+    { regex => qr/("(?:[^"\\]|\\.)*")/,       color => 'string' },
+    { regex => qr/('(?:[^'\\]|\\.)*')/,       color => 'string' },
+    { regex => qr/\$\((?:[^()]+|(?R))*\)/x,   color => 'subshell' },
+    { regex => qr/`[^`]*`/,                    color => 'subshell' },
+    { regex => qr/\b(local|declare|export|typeset)\b/, color => 'decl' },
+    { regex => qr/\b(if|then|else|elif|fi|for|while|do|done|until|select|case|esac|break|continue)\b/, color => 'control' },
+    { regex => qr/\b(function|return|exit|trap|shift|read|mapfile|set|unset)\b/, color => 'builtin' },
+    { regex => qr/\b(printf|echo|mkdir|find|grep|sed|awk|cut|sort|head|tail|xargs|cat|touch|chmod|chown|curl|wget)\b/, color => 'command' },
+    { regex => qr/\$[A-Za-z0-9_@#*!?_-]+/, color => 'variable' },
+    { regex => qr/\b[0-9]+(\.[0-9]+)?\b|0x[0-9A-Fa-f]+/, color => 'number' },
+    { regex => qr/\[\[|\]\]|\(\(|\)\)|\(|\)|\{|\}/, color => 'bracket' },
+    { regex => qr/#.*/, color => 'comment' },
+);
 
-    # Print with indentation
-    printf "%s\n" "$highlighted" | sed "s/^/$indent    /"
+sub highlight {
+    my ($line, $indent) = @_;
+    foreach my $p (@patterns) {
+        $line =~ s/($p->{regex})/$C{$p->{color}}$1$C{reset}/g;
+    }
+    return $indent . $line;
+}
+
+for my $line (split /\n/, $content) {
+    print highlight($line, $indent), "\n";
+}
+PERL_CODE
 }
 
 #------------------------------------------------------------------------
@@ -651,7 +653,7 @@ _h_highlight_script() {
 #------------------------------------------------------------------------
 
 needed_deps=(grep sed cut head readlink realpath)
-optional_deps=(tput)
+optional_deps=(tput fzf)
 
 _h_check_dependencies() {
     local -n required="$1"    # Required dependencies (pass by name)

@@ -18,7 +18,7 @@ declare -gA __H_SEEN_BUILTINS
 declare -gA __H_SHADOW_SEEN
 declare -gA __H_VISITED        # NEW: global visited set for recursion protection
 declare -g suppress_builtin_msg=1   # suppress repeated builtin help
-complete -F _ca_completion h
+complete -F _ca_completion ca
 
 ca() {
     # -------------------------

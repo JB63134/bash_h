@@ -1,22 +1,26 @@
-------------------------------------------------------------------------------------------------------------------
-
 📦 h — A Bash help tool
+
+h is a full fledged command resolution engine that provides help info from various sources.  
+by using common flags such as --help -help -h -? 
+help for builtins and keywords is available via help e.g 'help exit'
+For edge cases, keywords without help info, a brief description is provided.
+and as a backup, h checks if a man page or an info page exists and alerts the user.
 
 h is very BASH specific, and GNU specific. 
 
 Fully Works (native, no changes):
-✔ All major Linux distros with GNU userland and Bash ≥ 4.3
+All major Linux distros with GNU userland and Bash ≥ 4.3 such as:
+
+Debian / Ubuntu / Mint 
+Fedora / RHEL / Rocky
+Arch / Manjaro / Endeavour
+openSUSE
 
 Works With Minor Fix (install GNU tools):
-✔ macOS (Homebrew GNU tools + brew bash)
-✔ FreeBSD (pkg GNU tools + bash)
+macOS (Homebrew GNU tools + brew bash)
+FreeBSD (pkg GNU tools + bash)
 
-h as become a full fledged command resolution engine that provides help info from various sources.  
-by using common flags such as --help -help -h -? 
-help for builtins available available via help - 'help exit'
-For edge case keywords eithout help info a brief description is provided.
-and as a backup, checks if a man page or an info page exists and alerts the user.
-
+--------------------------------------------------------------------------------------------
 
 V1.0.0 was a small alias: alias h='eval "$(history -p \!\! | awk '\''{print $1}'\'')" --help'
 
@@ -35,7 +39,9 @@ V3.0.0
       As a fallback, checks if a man page exists and alerts the user.
       For aliases, functions and scripts - handle displaying contents.
 
+
 ------------------------------------------------------------------------------------------------------------------
+
 
 
 📦 ca — A Buggy (But Ambitious) Bash Command Analyzer

@@ -124,12 +124,12 @@ ca() {
     # handle arguments for h
     # -------------------------------------------------------------------------
     case "$cmd" in
-        -h|--help) _he-usage; return 0;;
-        -v|--version) _he-ver; return 0;;
-        -s|--sourced) printf "\n" && _sourced_files; return 0;;
-        -o|--overridden) printf "\n" && _overridden; return 0;;
-        -p|--path) printf "\n" && _writable_dir_in_path; return 0;;
-        -S|--suid) printf "\n" && _suid_scan; return 0;;
+        -h|--help) _ca_usage; return 0;;
+        -v|--version) _ca_ver; return 0;;
+        -s|--sourced) printf "\n" && _ca_sourced_files; return 0;;
+        -o|--overridden) printf "\n" && _ca_overridden; return 0;;
+        -p|--path) printf "\n" && _ca_writable_dir_in_path; return 0;;
+        -S|--suid) printf "\n" && _ca_suid_scan; return 0;;
         -f|--fzf)
             if ! command -v fzf &>/dev/null; then
                 printf "fzf not installed\n"
@@ -166,12 +166,12 @@ ca() {
     # -------------------------------------------------------------------------
     if [[ "$cmdline" =~ [\|\&\;] ]]; then
         local segments=()
-        _split_top_level_commands "$cmdline" segments
+        _ca_split_top_level_commands "$cmdline" segments
 
         for seg in "${segments[@]}"; do
             # Get individual commands in the segment (e.g., within a pipeline)
             local subcmds=()
-            _parse_commands "$seg" subcmds
+            _ca_parse_commands "$seg" subcmds
 
             for c in "${subcmds[@]}"; do
                 printf "%s${CYAN}↳ Subcommand:${RESET} %s\n" "$indent" "$c"
@@ -352,7 +352,7 @@ fi
         alias_expansion=${alias_expansion:1:${#alias_expansion}-2}   # trim outer quotes
 
         # Expand environment vars safely (no command execution)
-        alias_expansion=$(_expand_vars "$alias_expansion")
+        alias_expansion=$(_ca_expand_vars "$alias_expansion")
   
         alias_def=$(alias "$cmd")
         printf "%s├─ ${CYAN}'%s' ${RESET}is an alias → resolves to: ${CYAN}%s${RESET}\n" "$indent" "$cmd" "$alias_def"
@@ -361,7 +361,7 @@ fi
         local found_location=""
         local line_number
         
-        _sourcedtree
+        _ca_sourcedtree
         
         #----------------------------
         # Enable nullglob temporarily 
@@ -385,11 +385,11 @@ fi
         # Handle alias expansion with chain/pipeline parsing
         if [[ "$alias_expansion" =~ [\|\&\;] ]]; then
             local segments=()
-            _split_top_level_commands "$alias_expansion" segments
+            _ca_split_top_level_commands "$alias_expansion" segments
 
             for seg in "${segments[@]}"; do
                 local subcmds=()
-                _parse_commands "$seg" subcmds
+                _ca_parse_commands "$seg" subcmds
 
                 for c in "${subcmds[@]}"; do
                     printf "%s${BPURP}    ↳ Alias subcommand:${RESET} %s\n" "$indent" "$c"
@@ -604,7 +604,7 @@ fi
 # Function: _h-usage
 # Purpose : Display usage information and examples for the `h` command analyzer.
 #------------------------------------------------------------------------
-_ca-usage() {
+_ca_usage() {
     cat <<'EOF'
 
      Usage:  ca [command]  
@@ -637,10 +637,10 @@ EOF
 # Function: _h-ver
 # Purpose : Display version information.
 #------------------------------------------------------------------------
-_ca-ver() {
+_ca_ver() {
     cat <<'EOF'
 
-     h v1.0.0 — Bash Command Analyzer
+     h v1.1.15 — Bash Command Analyzer
      Author : John Blair
      Updated: 2025-11-10  
           
@@ -670,17 +670,17 @@ EOF
 }
 
 #------------------------------------------------------------------------
-# Function: _suid_scan
+# Function: _ca_suid_scan
 # Purpose : Scan for SUID binaries
 #------------------------------------------------------------------------
-_suid_scan() {
+_ca_suid_scan() {
     printf "├─ Scanning for SUID binaries:\n"
 
     while IFS= read -r hit; do
         printf "    ↳ %s\n" "$hit"
     done < <(find / -perm -4000 -type f -exec ls -l {} + 2>/dev/null)
 }
-_suid_scan2() {
+_ca_suid_scan2() {
     printf "├─ Scanning for SUID binaries (parallelized):\n"
 
     # Export function for xargs (optional if using simple command)
@@ -694,10 +694,10 @@ _suid_scan2() {
         done
 }
 #------------------------------------------------------------------------
-# Function: _writable_dir_in_path
+# Function: _ca_writable_dir_in_path
 # Purpose : Detect writable directories in $PATH
 #------------------------------------------------------------------------
-_writable_dir_in_path() {
+_ca_writable_dir_in_path() {
     PATH="$OLD_PATH" 
     printf "├─ Examining PATH:\n"
     printf "├─ Identifying writable directories:\n"
@@ -737,10 +737,10 @@ _writable_dir_in_path() {
 }
 
 #------------------------------------------------------------------------
-# Function: _split_top_level_commands
+# Function: _ca_split_top_level_commands
 # Purpose : Split a Bash command line into top-level segments
 #------------------------------------------------------------------------
-_split_top_level_commands() {
+_ca_split_top_level_commands() {
     local input="$1"
     local -n out="$2"
     out=()
@@ -849,10 +849,10 @@ _split_top_level_commands() {
 }
 
 #------------------------------------------------------------------------
-# Function: _parse_commands
+# Function: _ca_parse_commands
 # Purpose : Parse a Bash segment into actual executed commands using a conservative tokenizer
 #------------------------------------------------------------------------
-_parse_commands() {
+_ca_parse_commands() {
     local cmdline="$1"
     local -n out_arr="${2:-out_arr}" 2>/dev/null || local -n out_arr="$2"
     [[ -z "$cmdline" ]] && return
@@ -1024,10 +1024,10 @@ _ca_completion() {
 }
 
 #------------------------------------------------------------------------
-# Function: _expand_vars
+# Function: _ca_expand_vars
 # Purpose : expand variables for aliases so $HOME resolves to /home/jb/ 
 #------------------------------------------------------------------------
-_expand_vars() {
+_ca_expand_vars() {
     local input="$1"
     # Only expand variables like $HOME, $USER, etc. Use 'printf' with parameter expansion to avoid arbitrary command execution.
     # Use a small whitelist: HOME, USER, PWD, SHELL
@@ -1040,14 +1040,14 @@ _expand_vars() {
 }
 
 #------------------------------------------------------------------------
-# Function: _sourcedtree
+# Function: _ca_sourcedtree
 # Purpose: Recursively scan .bashrc for ALL files that are sourced. including conditionals.
 #------------------------------------------------------------------------
 # Global array to track all sourced files
 declare -gA SOURCED_FILES_MAP=()   # associative array to avoid duplicates
 declare -ga SOURCED_FILES_LIST=()  # optional list preserving order
 
-_sourcedtree() {
+_ca_sourcedtree() {
     SOURCED_FILES_MAP=()
     SOURCED_FILES_LIST=()
     local file files depth max_depth
@@ -1059,13 +1059,13 @@ _sourcedtree() {
     shopt -u nullglob
 
     for file in "${files[@]}"; do
-        _sourcedtree_single "$file" "$depth" "$max_depth"
+        _ca_sourcedtree_single "$file" "$depth" "$max_depth"
     done
 }
 
     #-----------------------------------------------------------
     # Internal recursive function
-_sourcedtree_single() {
+_ca_sourcedtree_single() {
     local file="${1:-$HOME/.bashrc}"
     local depth="${2:-0}"
     local max_depth="${3:-5}"
@@ -1075,7 +1075,7 @@ _sourcedtree_single() {
 
     for ((i = 0; i < depth; i++)); do indent+="  "; done
 
-    expanded=$(_expand_path "$file")
+    expanded=$(_ca_expand_path "$file")
 
     # Skip duplicates
     [[ -n ${SOURCED_FILES_MAP["$expanded"]} ]] && return
@@ -1093,14 +1093,14 @@ _sourcedtree_single() {
         [[ $src =~ ^[[:space:]]*# ]] && continue
         [[ $src =~ (^|[[:space:]])(source|\.)[[:space:]]+([^#;]+) ]] || continue
         src="${BASH_REMATCH[3]}"
-        src=$(_expand_path "$src")
-        _sourcedtree_single "$src" $((depth + 1)) "$max_depth"
+        src=$(_ca_expand_path "$src")
+        _ca_sourcedtree_single "$src" $((depth + 1)) "$max_depth"
     done < <(grep -E '^\s*(\.|source)\s+' "$expanded" 2>/dev/null)
 }
 
     #-----------------------------------------------------------
-    # Helper: _expand_path
-_expand_path() {
+    # Helper: _ca_expand_path
+_ca_expand_path() {
     local p="$1"
 
     # Strip quotes and whitespace
@@ -1126,12 +1126,12 @@ _expand_path() {
 }
 
 #------------------------------------------------------------------------
-# Function: _sourced_files
+# Function: _ca_sourced_files
 # Purpose: display ALL files that are sourced.
 #------------------------------------------------------------------------
-_sourced_files() {
+_ca_sourced_files() {
     local garbage_count=${#garbage[@]}
-    _sourcedtree
+    _ca_sourcedtree
     
     printf "%s├─ Searching for files that have been sourced into the enviroment automatically\n" 
     printf "    ↳ Discovered the following files:\n\n" 
@@ -1263,22 +1263,22 @@ _ca_check_dependencies() {
 }
 
 #------------------------------------------------------------------------
-# Function: _overridden                         
+# Function: _ca_overridden                         
 # Purpose : list all commands that override another command
 #------------------------------------------------------------------------
-_overridden() {
-    _alias_override
+_ca_overridden() {
+    _ca_alias_override
     printf "\n"  
-    _function_override
+    _ca_function_override
     printf "\n"  
-    _builtin_override
+    _ca_builtin_override
 }
 
 #------------------------------------------------------------------------
-# Function: _alias_override                         
+# Function: _ca_alias_override                         
 # Purpose : list all aliases that override a command
 #------------------------------------------------------------------------
-_alias_override() { 
+_ca_alias_override() { 
     local acmd list akind
     local flag=0
     
@@ -1314,10 +1314,10 @@ _alias_override() {
 }
 
 #------------------------------------------------------------------------
-# Function: _function_override                         
+# Function: _ca_function_override                         
 # Purpose : list all functions that override a command
 #------------------------------------------------------------------------
-_function_override() { 
+_ca_function_override() { 
     local funcmd kind kinds 
     local func_flag=0
 
@@ -1355,10 +1355,10 @@ _function_override() {
 }
 
 #------------------------------------------------------------------------
-# Function: _builtin_override
+# Function: _ca_builtin_override
 # Purpose : list builtins that are disabled and note if external commands replace them
 #------------------------------------------------------------------------
-_builtin_override() {
+_ca_builtin_override() {
     printf "%s├─ Examining disabled builtins to identify any replacement commands:\n" "$indent"
 
     local b disabled=()

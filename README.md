@@ -3,8 +3,7 @@
 [![MIT License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Version](https://img.shields.io/badge/version-3.0.0-blue)](https://github.com/yourusername/h-bash-helper/releases)
 
-'h' is a full fledged command resolution engine that unifies help into one shortcut - h      
-`h` is a smart Bash helper that analyzes commands, aliases, functions, builtins, and scripts. It shows their location, expands aliases, provides help/man info, and even syntax-highlights functions and scripts.
+`h` is a full fledged command resolution engine that unifies help into one shortcut - h   
 
 ---
 

@@ -333,7 +333,7 @@ fi
         printf "%s    ↳ Declared in: ${CYAN}%s (line %s)${RESET}\n" "$indent" "$file" "$line"
         printf "%s    ↳ Showing function: ${CYAN}%s${RESET}\n\n"  "$indent" "$cmd"        
         func_content=$(declare -f "$cmd")
-        _highlight_script "$func_content" "$indent"
+        _ca_highlight_script "$func_content" "$indent"
         printf "\n%s    ─── End of function '%s' ───\n" "$indent" "$cmd"    
         return 0
     fi
@@ -584,7 +584,7 @@ fi
         if [[ "$file_info" == *"script"* || "$file_info" == *"text executable"* ]]; then
             printf "%s    ↳ Showing script ${CYAN}'%s'${RESET}:\n\n" "$indent" "$cmd"
             if [[ -r "$cmd_path" ]]; then
-                _highlight_script "$cmd_path" "$indent"
+                _ca_highlight_script "$cmd_path" "$indent"
                 printf "\n\n%s    ─── End of script '%s' ───\n" "$indent" "$cmd"
             fi
             return 0
@@ -1142,7 +1142,7 @@ _ca_sourced_files() {
 }        
 
 #------------------------------------------------------------------------
-# Function: _highlight_script   # _highlight_script "$path-to-script" "<blankspaces>"
+# Function: _ca_highlight_script   # _ca_highlight_script "$path-to-script" "<blankspaces>"
 # Purpose: Modular syntax highlighting with indentation based on string in $2
 #
 #        how to add patterns and colors for highlighting
@@ -1158,7 +1158,7 @@ _ca_sourced_files() {
 #  HIGHLIGHT_PATTERNS+=('\bforecast\b' '\bradar\b') # Highlight 'forecast' and 'radar'
 #  HIGHLIGHT_COLORS+=('\x1b[95m' '\x1b[92m')  # bright magenta & bright green
 #------------------------------------------------------------------------
-_highlight_script() {
+_ca_highlight_script() {
     local input="$1"
     local indent="${2:-}"
     local highlighted

@@ -1,3 +1,35 @@
+------------------------------------------------------------------------------------------------------------------
+
+📦 h — A Buggy (But Ambitious) Bash help tool
+
+h is very BASH specific, and Debian specific. Should work on Debian based distributions like Ubuntu, and Linux Mint. 
+
+h as become a full fledged command resolution engine that provides help info from various sources.  
+by using common flags such as --help -help -h -? 
+help for builtins available available via help - 'help exit'
+For edge case keywords eithout help info a brief description is provided.
+and as a backup, checks if a man page or an info page exists and alerts the user.
+
+
+V1.0.0 was a small alias: alias h='eval "$(history -p \!\! | awk '\''{print $1}'\'')" --help'
+
+V2.0.0 was a small function using fc similar to this:
+
+      h() {
+          last_cmd=$(fc -ln -1 | awk '{print $1}')
+          # Run the last command with --help appended
+          eval "$last_cmd --help"
+      }
+     
+V3.0.0
+      I decided to rewrite h so that i could get help from multiple sources.
+      Using common flags like '<command> --help', -help, -h, or -?.
+      For builtins and some keywords use 'help "command"'
+      As a fallback, checks if a man page exists and alerts the user.
+      For aliases, functions and scripts - handle displaying contents.
+
+------------------------------------------------------------------------------------------------------------------
+
 
 📦 ca — A Buggy (But Ambitious) Bash Command Analyzer
 
@@ -46,32 +78,3 @@ ca is a shell-command introspection tool that tells you what a command really is
 
 💡 Tips Use ca when a command behaves unexpectedly. Use it to debug PATH issues or command conflicts. Use it when aliases or functions override global tools. Use it to audit your environment for security problems Or simply use it to explore Bash internals
 
-------------------------------------------------------------------------------------------------------------------
-
-📦 h — A Buggy (But Ambitious) Bash help tool
-
-h is very BASH specific, and Debian specific. Should work on Debian based distributions like Ubuntu, and Linux Mint. 
-
-h as become a full fledged command resolution engine that provides help info from various sources.  
-by using common flags such as --help -help -h -? 
-help for builtins available available via help - 'help exit'
-For edge case keywords eithout help info a brief description is provided.
-and as a backup, checks if a man page or an info page exists and alerts the user.
-
-
-V1.0.0 was a small alias: alias h='eval "$(history -p \!\! | awk '\''{print $1}'\'')" --help'
-
-V2.0.0 was a small function using fc similar to this:
-
-      h() {
-          last_cmd=$(fc -ln -1 | awk '{print $1}')
-          # Run the last command with --help appended
-          eval "$last_cmd --help"
-      }
-     
-V3.0.0
-      I decided to rewrite h so that i could get help from multiple sources.
-      Using common flags like '<command> --help', -help, -h, or -?.
-      For builtins and some keywords use 'help "command"'
-      As a fallback, checks if a man page exists and alerts the user.
-      For aliases, functions and scripts - handle displaying contents.

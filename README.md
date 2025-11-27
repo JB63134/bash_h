@@ -33,11 +33,11 @@ V2.0.0 was a small function using fc similar to this:
       }
      
 V3.0.0
-      I decided to rewrite h so that i could get help from multiple sources.
-      Using common flags like '<command> --help', -help, -h, or -?.
-      For builtins and some keywords use 'help "command"'
-      As a fallback, checks if a man page exists and alerts the user.
-      For aliases, functions and scripts - handle displaying contents.
+      I decided to rewrite h so that i could get help from multiple sources.  
+      Using common flags like '<command> --help', -help, -h, or -?.  
+      For builtins and some keywords use 'help "command"'  
+      As a fallback, checks if a man page exists and alerts the user.  
+      For aliases, functions and scripts - handle displaying contents.  
 
 
 ------------------------------------------------------------------------------------------------------------------
@@ -48,11 +48,11 @@ V3.0.0
 
 ca is very BASH specific, and Debian specific. Should work on Debian based distributions like Ubuntu, and Linux Mint. 
 
-ca is a shell-command introspection tool that tells you what a command really is. Instead of relying on multiple tools (type, which, command -V, declare, alias, etc.), ca unifies all resolution logic into a single command analysis engine.
+ca is a shell-command introspection tool that tells you what a command really is.   Instead of relying on multiple tools (type, which, command -V, declare, alias, etc.), ca unifies all resolution logic into a single command analysis engine.
 
 🚀 Overview: Modern shells resolve commands through a layered chain: Alias → Function → Builtin → keyword → File in $PATH (Script / Binary).  ca tries to walk this chain recursively, determining the true implementation of any command while providing relevent information and any available help.
 
-🧪 Use Cases Understand what actually runs when you type a command. Audit scripts and wrappers in toolchains. Debug $PATH problems. Identify missing dependencies. Identify SUID / capability-based escalation paths. Identify aliases and functions that override other commands, Identify disabled builtins that have been overridden by executables. and get help information.
+🧪 Use Cases Understand what actually runs when you type a command.   Audit scripts and wrappers in toolchains.   Debug $PATH problems.   Identify missing dependencies.   Identify SUID / capability-based escalation paths.   Identify aliases and functions that override other commands.   Identify disabled builtins that have been overridden by executables.
 
 ✨ Key Features 
 

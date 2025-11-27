@@ -1,10 +1,10 @@
 📦 h — A Bash help tool
 
-h is a full fledged command resolution engine that provides help info from various sources.  
-by using common flags such as --help -help -h -? 
-help for builtins and keywords is available via help e.g 'help exit'
-For edge cases, keywords without help info, a brief description is provided.
-and as a backup, h checks if a man page or an info page exists and alerts the user.
+h is a full fledged command resolution engine that unifies help into one shortcut - h.    
+Provides help output by iterating through common flags '<command> --help -help -h -?'  
+Provides help for builtins and keywords via help e.g 'help exit'  
+For edge cases, keywords without help info, a brief description is provided.  
+and as a backup, h checks if a man page or an info page exists and alerts the user.  
 
 h is very BASH specific, and GNU specific. 
 
@@ -50,7 +50,7 @@ ca is very BASH specific, and Debian specific. Should work on Debian based distr
 
 ca is a shell-command introspection tool that tells you what a command really is.   Instead of relying on multiple tools (type, which, command -V, declare, alias, etc.), ca unifies all resolution logic into a single command analysis engine.
 
-🚀 Overview: Modern shells resolve commands through a layered chain: Alias → Function → Builtin → keyword → File in $PATH (Script / Binary).  ca tries to walk this chain recursively, determining the true implementation of any command while providing relevent information and any available help.
+🚀 Overview: Modern shells resolve commands through a layered chain: Alias → Function → Builtin → keyword → File in $PATH (Script / Binary).  ca tries to walk this chain recursively, determining the true implementation of any command while providing relevent information.
 
 🧪 Use Cases Understand what actually runs when you type a command.   Audit scripts and wrappers in toolchains.   Debug $PATH problems.   Identify missing dependencies.   Identify SUID / capability-based escalation paths.   Identify aliases and functions that override other commands.   Identify disabled builtins that have been overridden by executables.
 
@@ -70,7 +70,7 @@ ca is a shell-command introspection tool that tells you what a command really is
 
 📜 Builtin Introspection Shows: whether the builtin is enabled, whether it is a core builtin or loadable, and help via 'help <command>'
 
-⚙️ ELF Binary Analysis Displays: architecture, dynamic vs static linking, ELF interpreter, (ld-linux) capabilities, SUID/SGID bits, owner & permissions, resolved real path  (follows symlinks), List all dependencies and identify missing dependencies. and provides help output by iterating through common flags '<command> --help -help -h -?' with a fallback to alert the user if a man page exists.
+⚙️ ELF Binary Analysis Displays: architecture, dynamic vs static linking, ELF interpreter, (ld-linux) capabilities, SUID/SGID bits, owner & permissions, resolved real path  (follows symlinks), List all dependencies and identify missing dependencies. 
 
 📦 Package Lookup On Debian/Ubuntu/linux-Mint systems: uses dpkg to display the package name, version,  maintainer info, and package description.
 

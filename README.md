@@ -10,7 +10,6 @@ h is very BASH specific, and GNU specific.
 
 Fully Works (native, no changes):
 All major Linux distros with GNU userland and Bash ≥ 4.3 such as:  
-
 Debian / Ubuntu / Mint 
 Fedora / RHEL / Rocky
 Arch / Manjaro / Endeavour

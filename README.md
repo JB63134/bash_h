@@ -1,11 +1,37 @@
 # h — Bash Help Tool
 
-`h` is a smart Bash helper that analyzes commands, aliases, functions, builtins, and scripts. It shows their location, expands aliases, provides help/man info, and even syntax-highlights scripts/functions.
+[![MIT License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![Version](https://img.shields.io/badge/version-3.0.0-blue)](https://github.com/yourusername/h-bash-helper/releases)
+
+'h' is a full fledged command resolution engine that unifies help into one shortcut - h      
+`h` is a smart Bash helper that analyzes commands, aliases, functions, builtins, and scripts. It shows their location, expands aliases, provides help/man info, and even syntax-highlights functions and scripts.
+
+---
+
+## Features
+
+- Detects Bash **keywords, builtins, aliases, functions, and external commands**  
+- Shows **where commands/aliases/functions are defined**  
+- Expands **aliases** and **environment variables**  
+- Displays `--help` or points to `man`/`info` pages  
+- Syntax-highlights Bash **functions and scripts**  
+- Optional **FZF integration** for interactive selection  
+- Depth-safe analysis to prevent recursion loops  
+
+---
+
+## Installation
+
+Download `.bash_h` and source it in your `.bashrc`:
+
+```bash
+# Source in your shell
+echo 'source ~/.bash_h' >> ~/.bashrc
+source ~/.bashrc
 
 
-📦 h — A Bash help tool
 
-h is a full fledged command resolution engine that unifies help into one shortcut - h.    
+
 Provides help output by iterating through common flags '<command> --help -help -h -?'  
 Provides help for builtins and keywords via help e.g 'help exit'  
 For edge cases, keywords without help info, a brief description is provided.  
@@ -24,102 +50,9 @@ Works With Minor Fix (install GNU tools):
 macOS (Homebrew GNU tools + brew bash)  
 FreeBSD (pkg GNU tools + bash)
 
-    22:21:55 Wed Nov 26: ~ $ cat crap
-    sandy poop...
-
-    22:22:00 Wed Nov 26: ~ $ h
-
-    ├─ h - a BASH help tool
-    ├─ 'cat' is an external command
-        ↳ Path: /usr/bin/cat
-        ↳ Showing 'cat --help':
-
-             Usage: /usr/bin/cat [OPTION]... [FILE]...
-             Concatenate FILE(s) to standard output.
-         
-             With no FILE, or when FILE is -, read standard input.
-         
-               -A, --show-all           equivalent to -vET
-               -b, --number-nonblank    number nonempty output lines, overrides -n
-               -e                       equivalent to -vE
-               -E, --show-ends          display $ at end of each line
-               -n, --number             number all output lines
-               -s, --squeeze-blank      suppress repeated empty output lines
-               -t                       equivalent to -vT
-               -T, --show-tabs          display TAB characters as ^I
-               -u                       (ignored)
-               -v, --show-nonprinting   use ^ and M- notation, except for LFD and TAB
-                   --help        display this help and exit
-                   --version     output version information and exit
-         
-             Examples:
-               /usr/bin/cat f - g  Output f's contents, then standard input, then g's contents.
-               /usr/bin/cat        Copy standard input to standard output.
-         
-             GNU coreutils online help: <https://www.gnu.org/software/coreutils/>
-             Full documentation <https://www.gnu.org/software/coreutils/cat>
-             or available locally via: info '(coreutils) cat invocation'
-         
-    
-    22:01:10 Wed Nov 26: ~ $ h awk
-
-    ├─ h - a BASH help tool
-    ├─ 'awk' is an external command
-        ↳ Path: /usr/bin/awk
-        ↳ Symbolic link to: /usr/bin/mawk
-        ↳ Showing 'mawk --help':
-
-             Usage: mawk [Options] [Program] [file ...]
-         
-             Program:
-                 The -f option value is the name of a file containing program text.
-                 If no -f option is given, a "--" ends option processing; the following
-                 parameters are the program text.
-         
-             Options:
-                 -f program-file  Program  text is read from file instead of from the
-                                  command-line.  Multiple -f options are accepted.
-                 -F value         sets the field separator, FS, to value.
-                 -v var=value     assigns value to program variable var.
-                 --               unambiguous end of options.
-         
-                 Implementation-specific options are prefixed with "-W".  They can be
-                 abbreviated:
-         
-                 -W version       show version information and exit.
-                 -W dump          show assembler-like listing of program and exit.
-                 -W help          show this message and exit.
-                 -W interactive   set unbuffered output, line-buffered input.
-                 -W exec file     use file as program as well as last option.
-                 -W posix         stricter POSIX checking.
-                 -W random=number set initial random seed.
-                 -W sprintf=number adjust size of sprintf buffer.
-                 -W traditional   pre-POSIX 2001.
-                 -W usage         show this message and exit.
-
-    22:15:57 Wed Nov 26: ~ $ h then
-
-    ├─ h - a BASH help tool
-    ├─ Detected BASH Keyword 'then' 
-        ↳ then -- Begins the command block for a true condition.
-
-    22:16:02 Wed Nov 26: ~ $ h exit
-
-    ├─ h - a BASH help tool
-    ├─ 'exit' is a shell builtin
-        ↳ Showing 'help exit':
-
-            exit: exit [n]
-                Exit the shell.
-            
-                Exits the shell with a status of N.  If N is omitted, the exit status
-                is that of the last command executed.
-
-
-
-
 --------------------------------------------------------------------------------------------
-history:  
+
+History:  
 
 V1.0.0 was a small alias: alias h='eval "$(history -p \!\! | awk '\''{print $1}'\'')" --help'
 

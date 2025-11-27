@@ -55,9 +55,6 @@ FreeBSD (pkg GNU tools + bash)
              Full documentation <https://www.gnu.org/software/coreutils/cat>
              or available locally via: info '(coreutils) cat invocation'
          
-
-    22:22:02 Wed Nov 26: ~ $ 
-
     
     22:01:10 Wed Nov 26: ~ $ h awk
 

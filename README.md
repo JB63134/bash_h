@@ -12,14 +12,11 @@
 
 - Detects Bash **keywords, builtins, aliases, functions, and external commands**  
 - Shows **where commands/aliases/functions are defined**  
-- Expands **aliases** and **environment variables**  
-- Displays `--help` or points to `man`/`info` pages
 - Provides help output by iterating through common flags '<command> --help -help -h -?'
 - For edge cases, keywords without help info, a brief description is provided.
 - As a fallback, h checks if a man page or an info page exists and alerts the user.  
 - Syntax-highlights Bash **functions and scripts**  
-- Optional **FZF integration** for interactive selection  
-- Depth-safe analysis to prevent recursion loops  
+- Optional **FZF integration** for interactive selection
 
 ---
 

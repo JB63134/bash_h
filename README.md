@@ -19,6 +19,46 @@ Works With Minor Fix (install GNU tools):
 macOS (Homebrew GNU tools + brew bash)  
 FreeBSD (pkg GNU tools + bash)
 
+    22:21:55 Wed Nov 26: ~ $ cat crap
+    sandy poop...
+
+    22:22:00 Wed Nov 26: ~ $ h
+
+    ├─ h - a BASH help tool
+    ├─ 'cat' is an external command
+        ↳ Path: /usr/bin/cat
+        ↳ Showing 'cat --help':
+
+             Usage: /usr/bin/cat [OPTION]... [FILE]...
+             Concatenate FILE(s) to standard output.
+         
+             With no FILE, or when FILE is -, read standard input.
+         
+               -A, --show-all           equivalent to -vET
+               -b, --number-nonblank    number nonempty output lines, overrides -n
+               -e                       equivalent to -vE
+               -E, --show-ends          display $ at end of each line
+               -n, --number             number all output lines
+               -s, --squeeze-blank      suppress repeated empty output lines
+               -t                       equivalent to -vT
+               -T, --show-tabs          display TAB characters as ^I
+               -u                       (ignored)
+               -v, --show-nonprinting   use ^ and M- notation, except for LFD and TAB
+                   --help        display this help and exit
+                   --version     output version information and exit
+         
+             Examples:
+               /usr/bin/cat f - g  Output f's contents, then standard input, then g's contents.
+               /usr/bin/cat        Copy standard input to standard output.
+         
+             GNU coreutils online help: <https://www.gnu.org/software/coreutils/>
+             Full documentation <https://www.gnu.org/software/coreutils/cat>
+             or available locally via: info '(coreutils) cat invocation'
+         
+
+    22:22:02 Wed Nov 26: ~ $ 
+
+    
     22:01:10 Wed Nov 26: ~ $ h awk
 
     ├─ h - a BASH help tool
@@ -55,7 +95,23 @@ FreeBSD (pkg GNU tools + bash)
                  -W traditional   pre-POSIX 2001.
                  -W usage         show this message and exit.
 
+    22:15:57 Wed Nov 26: ~ $ h then
 
+    ├─ h - a BASH help tool
+    ├─ Detected BASH Keyword 'then' 
+        ↳ then -- Begins the command block for a true condition.
+
+    22:16:02 Wed Nov 26: ~ $ h exit
+
+    ├─ h - a BASH help tool
+    ├─ 'exit' is a shell builtin
+        ↳ Showing 'help exit':
+
+            exit: exit [n]
+                Exit the shell.
+            
+                Exits the shell with a status of N.  If N is omitted, the exit status
+                is that of the last command executed.
 
 
 

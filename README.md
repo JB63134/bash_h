@@ -24,12 +24,9 @@
 
 Download `.bash_h` and source it in your `.bashrc`:
 
-```bash
 # Source in your shell
 echo 'source ~/.bash_h' >> ~/.bashrc
 source ~/.bashrc
-
-
 
 
 Provides help output by iterating through common flags '<command> --help -help -h -?'  
@@ -41,10 +38,7 @@ h is very BASH specific, and GNU specific.
 
 Fully Works (native, no changes):
 All major Linux distros with GNU userland and Bash ≥ 4.3 such as:  
-Debian / Ubuntu / Mint 
-Fedora / RHEL / Rocky
-Arch / Manjaro / Endeavour
-openSUSE
+Debian / Fedora / Arch / openSUSE
 
 Works With Minor Fix (install GNU tools):  
 macOS (Homebrew GNU tools + brew bash)  

@@ -1,3 +1,8 @@
+# h — Bash Help Tool
+
+`h` is a smart Bash helper that analyzes commands, aliases, functions, builtins, and scripts. It shows their location, expands aliases, provides help/man info, and even syntax-highlights scripts/functions.
+
+
 📦 h — A Bash help tool
 
 h is a full fledged command resolution engine that unifies help into one shortcut - h.    

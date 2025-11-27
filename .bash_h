@@ -121,8 +121,8 @@ h() {
     # handle arguments for h
     # -------------------------------------------------------------------------
     case "$cmd" in
-        -h|--help) _h-usage; return 0;;
-        -v|--version) _h-ver; return 0;;
+        -h|--help) _h_usage; return 0;;
+        -v|--version) _h_ver; return 0;;
         -f|--fzf)
             if ! command -v fzf &>/dev/null; then
                 printf "fzf not installed\n"
@@ -261,7 +261,7 @@ fi
         printf "%s    ↳ Declared in: ${CYAN}%s (line %s)${RESET}\n" "$indent" "$file" "$line"
         printf "%s    ↳ Showing function: ${CYAN}%s${RESET}\n\n"  "$indent" "$cmd"        
         func_content=$(declare -f "$cmd")
-        _highlight_script "$func_content" "$indent"
+        _h_highlight_script "$func_content" "$indent"
         printf "\n%s    ─── End of function '%s' ───\n" "$indent" "$cmd"    
         return 0
     fi
@@ -280,7 +280,7 @@ fi
         alias_expansion=${alias_expansion:1:${#alias_expansion}-2}   # trim outer quotes
 
         # Expand environment vars safely (no command execution)
-        alias_expansion=$(_expand_vars "$alias_expansion")
+        alias_expansion=$(_h_expand_vars "$alias_expansion")
   
         alias_def=$(alias "$cmd")
         printf "%s├─ ${CYAN}'%s' ${RESET}is an alias → resolves to: ${CYAN}%s${RESET}\n" "$indent" "$cmd" "$alias_def"
@@ -289,7 +289,7 @@ fi
         local found_location=""
         local line_number
         
-        _sourcedtree
+        _h_sourcedtree
         
         #----------------------------
         # Enable nullglob temporarily 
@@ -303,27 +303,17 @@ fi
                 printf "%s    ↳ Defined in: ${CYAN}%s (line %s)${RESET}\n" "$indent" "$file" "$line_number"
              fi
         done
-        (( !nullglob_was )) && shopt -u nullglob           # Restore nullglob state if we enabled it
+        (( !nullglob_was )) && shopt -u nullglob     # Restore nullglob state if we enabled it
         #----------------------------
         
         if [[ -z "$found_location" ]]; then
             printf "%s    ↳ Defined manually in shell, or a custom location.\n" "$indent"
         fi     
-            # No chain/pipeline — analyze normally
             # Resolve only the first token of the alias expansion to avoid arbitrary shells
             read -r -a alias_tokens <<< "$alias_expansion"
             local primary="${alias_tokens[0]}"
-            # If primary is a function, recurse; otherwise analyze as external or builtin
-            if declare -F "$primary" &>/dev/null; then
-                if [[ -z "${__H_VISITED[$primary]}" ]]; then
-                    __H_VISITED["$primary"]=1
-                    h "$primary" $((depth + 1))
-                else
-                    printf "%s    ↳ ${CYAN}%s${RESET} already visited — possible cycle\n" "$indent" "$primary"
-                fi
-            else
-                h "$alias_expansion" $((depth + 1))
-            fi
+            h "$alias_expansion" $((depth + 1))
+
             return 0      
     fi
 
@@ -351,7 +341,7 @@ fi
         if [[ "$file_info" == *"script"* || "$file_info" == *"text executable"* ]]; then
             printf "%s    ↳ Showing script ${CYAN}'%s'${RESET}:\n\n" "$indent" "$cmd"
             if [[ -r "$cmd_path" ]]; then
-                _highlight_script "$cmd_path" "$indent" 
+                _h_highlight_script "$cmd_path" "$indent" 
                 printf "\n\n%s    ─── End of script '%s' ───\n" "$indent" "$cmd"
             fi
             return 0
@@ -402,7 +392,7 @@ fi
 # Function: _h-usage
 # Purpose : Display usage information and examples for the `h` command analyzer.
 #------------------------------------------------------------------------
-_h-usage() {
+_h_usage() {
     cat <<'EOF'
 
      Usage:  h [command]  
@@ -431,7 +421,7 @@ EOF
 # Function: _h-ver
 # Purpose : Display version information.
 #------------------------------------------------------------------------
-_h-ver() {
+_h_ver() {
     cat <<'EOF'
 
      h v3.0.0 — Bash help tool
@@ -479,10 +469,10 @@ _h_completion() {
 }
 
 #------------------------------------------------------------------------
-# Function: _expand_vars
+# Function: _h_expand_vars
 # Purpose : expand variables for aliases so $HOME resolves to /home/jb/ 
 #------------------------------------------------------------------------
-_expand_vars() {
+_h_expand_vars() {
     local input="$1"
     # Only expand variables like $HOME, $USER, etc. Use 'printf' with parameter expansion to avoid arbitrary command execution.
     # Use a small whitelist: HOME, USER, PWD, SHELL
@@ -495,14 +485,14 @@ _expand_vars() {
 }
 
 #------------------------------------------------------------------------
-# Function: _sourcedtree
+# Function: _h_sourcedtree
 # Purpose: Recursively scan .bashrc for ALL files that are sourced. including conditionals.
 #------------------------------------------------------------------------
 # Global array to track all sourced files
 declare -gA SOURCED_FILES_MAP=()   # associative array to avoid duplicates
 declare -ga SOURCED_FILES_LIST=()  # optional list preserving order
 
-_sourcedtree() {
+_h_sourcedtree() {
     SOURCED_FILES_MAP=()
     SOURCED_FILES_LIST=()
     local file files depth max_depth
@@ -514,13 +504,13 @@ _sourcedtree() {
     shopt -u nullglob
 
     for file in "${files[@]}"; do
-        _sourcedtree_single "$file" "$depth" "$max_depth"
+        _h_sourcedtree_single "$file" "$depth" "$max_depth"
     done
 }
 
     #-----------------------------------------------------------
     # Internal recursive function
-_sourcedtree_single() {
+_h_sourcedtree_single() {
     local file="${1:-$HOME/.bashrc}"
     local depth="${2:-0}"
     local max_depth="${3:-5}"
@@ -530,7 +520,7 @@ _sourcedtree_single() {
 
     for ((i = 0; i < depth; i++)); do indent+="  "; done
 
-    expanded=$(_expand_path "$file")
+    expanded=$(_h_expand_path "$file")
 
     # Skip duplicates
     [[ -n ${SOURCED_FILES_MAP["$expanded"]} ]] && return
@@ -548,14 +538,14 @@ _sourcedtree_single() {
         [[ $src =~ ^[[:space:]]*# ]] && continue
         [[ $src =~ (^|[[:space:]])(source|\.)[[:space:]]+([^#;]+) ]] || continue
         src="${BASH_REMATCH[3]}"
-        src=$(_expand_path "$src")
-        _sourcedtree_single "$src" $((depth + 1)) "$max_depth"
+        src=$(_h_expand_path "$src")
+        _h_sourcedtree_single "$src" $((depth + 1)) "$max_depth"
     done < <(grep -E '^\s*(\.|source)\s+' "$expanded" 2>/dev/null)
 }
 
     #-----------------------------------------------------------
-    # Helper: _expand_path
-_expand_path() {
+    # Helper: _h_expand_path
+_h_expand_path() {
     local p="$1"
 
     # Strip quotes and whitespace
@@ -581,23 +571,7 @@ _expand_path() {
 }
 
 #------------------------------------------------------------------------
-# Function: _sourced_files
-# Purpose: display ALL files that are sourced.
-#------------------------------------------------------------------------
-_sourced_files() {
-    local garbage_count=${#garbage[@]}
-    _sourcedtree
-    
-    printf "%s├─ Searching for files that have been sourced into the enviroment automatically\n" 
-    printf "    ↳ Discovered the following files:\n\n" 
-    for file in "${SOURCED_FILES_LIST[@]}"; do
-        printf "      ${CYAN}%s${RESET}\n" "$file" 
-    done
-    printf "\n      End of list\n"
-}        
-
-#------------------------------------------------------------------------
-# Function: _highlight_script   # _highlight_script "$path-to-script" "<blankspaces>"
+# Function: _h_highlight_script   # _h_highlight_script "$path-to-script" "<blankspaces>"
 # Purpose: Modular syntax highlighting with indentation based on string in $2
 #
 #        how to add patterns and colors for highlighting
@@ -613,7 +587,7 @@ _sourced_files() {
 #  HIGHLIGHT_PATTERNS+=('\bforecast\b' '\bradar\b') # Highlight 'forecast' and 'radar'
 #  HIGHLIGHT_COLORS+=('\x1b[95m' '\x1b[92m')  # bright magenta & bright green
 #------------------------------------------------------------------------
-_highlight_script() {
+_h_highlight_script() {
     local input="$1"
     local indent="${2:-}"
     local highlighted

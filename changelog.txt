@@ -1,0 +1,16 @@
+V3.0.5 cleanup and switch highlighting to use a perl heredoc instead of unreliable sed.
+
+V3.0.0 I decided to rewrite h so that i could get help from multiple sources.
+       Using common flags like ' --help', -help, -h, or -?.
+       For builtins and some keywords use 'help "command"'
+       As a fallback, checks for both man pages and info pages then alerts the user if found. For aliases, functions and scripts - handle displaying contents.
+
+V2.0.0 was a small function using fc similar to this:
+
+       h() {
+          last_cmd=$(fc -ln -1 | awk '{print $1}')
+          # Run the last command with --help appended
+          eval "$last_cmd --help"
+      }
+
+V1.0.0 was a small alias: alias h='eval "$(history -p !! | awk '''{print $1}''')" --help'

@@ -20,6 +20,7 @@ macOS (Homebrew GNU tools + brew bash)
 FreeBSD (pkg GNU tools + bash)
 
 --------------------------------------------------------------------------------------------
+history:  
 
 V1.0.0 was a small alias: alias h='eval "$(history -p \!\! | awk '\''{print $1}'\'')" --help'
 

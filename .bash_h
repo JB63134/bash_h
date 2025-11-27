@@ -75,7 +75,7 @@ h() {
         #--------------------------
         # Greeting
         #--------------------------
-        printf "\n├─ h - a buggy BASH help tool\n"
+        printf "\n├─ h - a BASH help tool\n"
     fi 
     
     # -------------------------
@@ -309,12 +309,7 @@ fi
         if [[ -z "$found_location" ]]; then
             printf "%s    ↳ Defined manually in shell, or a custom location.\n" "$indent"
         fi     
-            # Resolve only the first token of the alias expansion to avoid arbitrary shells
-            read -r -a alias_tokens <<< "$alias_expansion"
-            local primary="${alias_tokens[0]}"
-            h "$alias_expansion" $((depth + 1))
-
-            return 0      
+        return 0      
     fi
 
     # -------------------------------------------------------------------------

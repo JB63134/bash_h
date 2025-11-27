@@ -1,24 +1,5 @@
-V3.1.15
-      bug fixes,
-      eliminated need for apt. code is now MUCH faster
-      cleaned up some recursion issues.
-
-V3.1.13
-      Now we have this 1400+ line mess in BASH
-      bug fixes
-      added support for detecting binaries with SUID set
-
-V3.1.11 
-      bunch of bug fixes and code cleanup.
-      added support for detecting builtins that are disabled and overridden by other commands.
-
-V3.1.1
-      added support for detecting all functions that overrride other commands.
-      And made alias override detection more robust.
-
 V3.0.0
-      Now we have this 1200+ line mess in BASH
-      Why did I do this?
+      Now h has become a fairly robust help tool
 
 V2.0.0  
       A small function using fc similar to this:

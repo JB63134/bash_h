@@ -2,7 +2,14 @@
 
 📦 h — A Bash help tool
 
-h is very BASH specific, and Debian specific. Should work on Debian based distributions like Ubuntu, and Linux Mint. 
+h is very BASH specific, and GNU specific. 
+
+Fully Works (native, no changes):
+✔ All major Linux distros with GNU userland and Bash ≥ 4.3
+
+Works With Minor Fix (install GNU tools):
+✔ macOS (Homebrew GNU tools + brew bash)
+✔ FreeBSD (pkg GNU tools + bash)
 
 h as become a full fledged command resolution engine that provides help info from various sources.  
 by using common flags such as --help -help -h -? 

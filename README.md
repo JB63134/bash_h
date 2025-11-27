@@ -47,7 +47,9 @@ V3.0.0
 📦 ca — A Buggy (But Ambitious) Bash Command Analyzer
 
 ca is very BASH specific, and Debian specific. Should work on Debian based distributions like Ubuntu, and Linux Mint. 
+  
 
+The command resolution engine from my h function became the basis for ca.  
 ca is a shell-command introspection tool that tells you what a command really is.   Instead of relying on multiple tools (type, which, command -V, declare, alias, etc.), ca unifies all resolution logic into a single command analysis engine.
 
 🚀 Overview: Modern shells resolve commands through a layered chain: Alias → Function → Builtin → keyword → File in $PATH (Script / Binary).  ca tries to walk this chain recursively, determining the true implementation of any command while providing relevent information.

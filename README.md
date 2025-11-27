@@ -1,6 +1,6 @@
 ------------------------------------------------------------------------------------------------------------------
 
-📦 h — A Buggy (But Ambitious) Bash help tool
+📦 h — A Buggy Bash help tool
 
 h is very BASH specific, and Debian specific. Should work on Debian based distributions like Ubuntu, and Linux Mint. 
 

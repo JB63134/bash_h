@@ -381,6 +381,7 @@ fi
         export OLD_PATH 
         return 0
     fi
+   
 }
  
 #------------------------------------------------------------------------
@@ -397,17 +398,17 @@ _h_usage() {
      Options:
            -h --help or h      Show this help text.
            -v --version        Show version information.
-           -f|--fzf
+           -f|--fzf            Use fzf to interactivly search for commands
+           
      Examples:
            h                   # Automatically analyzes your most recent command
-           h sudo              # Analyzes 'sudo'
-           h 'sudo rm'         # Ignores sudo and Analyzes rm
+           h awk               # Analyzes 'awk'
            h ls                # Is 'ls' a builtin, keyword, alias, function, script or binary?
 
      Features:
        • Handles builtins, aliases, keywords, functions, and external commands
        • Syntax-highlighted preview of functions and scripts
-       • Shows --help/-help/-h/-? output or points to man pages
+       • Shows --help/-help/-h/-? output or points to man/info pages
   
 EOF
 }
@@ -594,6 +595,68 @@ _h_highlight_script() {
         code="$input"
     fi
 
+    # Check if Perl is installed if not use sed
+    if ! command -v perl &>/dev/null; then
+        local highlighted
+        local use_color=1
+        local esc=$'\x1b'
+
+        # Disable color if stdout is not a terminal
+        [[ ! -t 1 ]] && use_color=0
+
+        # Read content safely
+        if [[ -f "$input" ]]; then
+            highlighted=$(<"$input")
+        else
+            highlighted="$input"
+        fi
+
+            # Highlight patterns
+        declare -a HIGHLIGHT_PATTERNS=(
+            '#.*'                                 # comments
+            '"[^"]*"|'\''[^'\'']*'\'''            # strings
+            '\$\([^)]*\)|`[^`]*`'                 # subshells
+            '\b(local|declare|export|typeset)\b'  # declarations
+            '\b(if|then|else|elif|fi|for|while|do|done|until|select|case|esac|break|continue)\b' # control
+            '\b(function|return|exit|trap|shift|read|mapfile|set|unset)\b' # builtins
+            '\b(printf|echo|mkdir|find|grep|sed|awk|cut|sort|head|tail|xargs|cat|touch|chmod|chown|curl|wget)\b' # commands
+            '\$[A-Za-z0-9_@#*!?_-]+'             # variables
+            '\b[0-9]+(\.[0-9]+)?\b|0x[0-9A-Fa-f]+' # numbers
+            '\[\[|\]\]|\(\(|\)\)|\(|\)|\{|\}'     # brackets/parens/braces
+        )
+
+        declare -a HIGHLIGHT_COLORS=(
+            "${esc}[36m"    # comments — cyan
+            "${esc}[96m"    # strings — bright cyan
+            "${esc}[35m"    # subshells — magenta
+            "${esc}[32m"    # declarations — green
+            "${esc}[93m"    # control — yellow
+            "${esc}[32m"    # builtins — green
+            "${esc}[35m"    # common commands — magenta
+            "${esc}[33m"    # variables — yellow
+            "${esc}[34m"    # numbers — blue
+            "${esc}[37m"    # brackets — gray
+        )
+
+        # Disable colors if needed
+        if (( use_color == 0 )); then
+            for i in "${!HIGHLIGHT_COLORS[@]}"; do
+                HIGHLIGHT_COLORS[$i]=""
+            done
+        fi
+
+        # Apply highlighting patterns
+        for i in "${!HIGHLIGHT_PATTERNS[@]}"; do
+            local pattern="${HIGHLIGHT_PATTERNS[$i]}"
+            local color="${HIGHLIGHT_COLORS[$i]}"
+            highlighted=$(echo "$highlighted" | sed -E "s/($pattern)/${color}\1${esc}[0m/g")
+        done
+
+        # Print with indentation
+        printf "%s\n" "$highlighted" | sed "s/^/$indent    /"
+        return
+    fi
+    
     perl - "$code" "$indent" <<'PERL_CODE'
 use strict;
 use warnings;
@@ -653,7 +716,7 @@ PERL_CODE
 #------------------------------------------------------------------------
 
 needed_deps=(grep sed cut head readlink realpath)
-optional_deps=(tput fzf)
+optional_deps=(tput perl fzf)
 
 _h_check_dependencies() {
     local -n required="$1"    # Required dependencies (pass by name)

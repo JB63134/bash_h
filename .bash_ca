@@ -640,7 +640,7 @@ EOF
 _ca-ver() {
     cat <<'EOF'
 
-     h v1.1.15 — Bash Command Analyzer
+     h v1.0.0 — Bash Command Analyzer
      Author : John Blair
      Updated: 2025-11-10  
           

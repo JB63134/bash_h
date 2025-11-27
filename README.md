@@ -1,27 +1,27 @@
 
-📦 h — A Buggy (But Ambitious) Bash Command Analyzer
+📦 ca — A Buggy (But Ambitious) Bash Command Analyzer
 
-h is very BASH specific, and Debian specific. Should work on Debian based distributions like Ubuntu, and Linux Mint. 
+ca is very BASH specific, and Debian specific. Should work on Debian based distributions like Ubuntu, and Linux Mint. 
 
-h is a shell-command introspection tool that tells you what a command really is. Instead of relying on multiple tools (type, which, command -V, declare, alias, etc.), h unifies all resolution logic into a single command analysis engine.
+ca is a shell-command introspection tool that tells you what a command really is. Instead of relying on multiple tools (type, which, command -V, declare, alias, etc.), ca unifies all resolution logic into a single command analysis engine.
 
-🚀 Overview: Modern shells resolve commands through a layered chain: Alias → Function → Builtin → keyword → File in $PATH (Script / Binary).  h tries to walk this chain recursively, determining the true implementation of any command while providing relevent information and any available help.
+🚀 Overview: Modern shells resolve commands through a layered chain: Alias → Function → Builtin → keyword → File in $PATH (Script / Binary).  ca tries to walk this chain recursively, determining the true implementation of any command while providing relevent information and any available help.
 
 🧪 Use Cases Understand what actually runs when you type a command. Audit scripts and wrappers in toolchains. Debug $PATH problems. Identify missing dependencies. Identify SUID / capability-based escalation paths. Identify aliases and functions that override other commands, Identify disabled builtins that have been overridden by executables. and get help information.
 
 ✨ Key Features 
 
-🔍Command Resolution: For any given command, h identifies: aliases, functions, builtins, keywords, external binaries, wrapper scripts, interpreted scripts and follows symlinks to find the exact thing that Bash will execute.
+🔍Command Resolution: For any given command, ca identifies: aliases, functions, builtins, keywords, external binaries, wrapper scripts, interpreted scripts and follows symlinks to find the exact thing that Bash will execute.
 
 🧭 PATH Inspection: Displays the full resolved path and alerts you of symlinks. Can help you identify $PATH ordering issues, and overridden commands.
 
 🔁 Recursive Analysis: (work in progress) Depth-limited to avoid infinite loops.
 
-📜 Alias Introspection: If a command resolves to an alias, h shows: alias definition, source file & line number (when available), recursive expansion and can alert you of aliases that shadow other files, etc.
+📜 Alias Introspection: If a command resolves to an alias, ca shows: alias definition, source file & line number (when available), recursive expansion and can alert you of aliases that shadow other files, etc.
 
-📜 Function Introspection: h extracts full function definition with a syntax-highlighted preview, and source file & line number (when available). Can alert you of Functions that shadow other files, builtins, etc.
+📜 Function Introspection: ca extracts full function definition with a syntax-highlighted preview, and source file & line number (when available). Can alert you of Functions that shadow other files, builtins, etc.
 
-📜 Script Introspection: h identifies shebang interpreter, real file location (follows symlinks), shows syntax-highlighted preview.  Supports: bash, sh, python, perl, ruby, node, awk, sed, and any #! file.
+📜 Script Introspection: ca identifies shebang interpreter, real file location (follows symlinks), shows syntax-highlighted preview.  Supports: bash, sh, python, perl, ruby, node, awk, sed, and any #! file.
 
 📜 Builtin Introspection Shows: whether the builtin is enabled, whether it is a core builtin or loadable, and help via 'help <command>'
 
@@ -29,26 +29,35 @@ h is a shell-command introspection tool that tells you what a command really is.
 
 📦 Package Lookup On Debian/Ubuntu/linux-Mint systems: uses dpkg to display the package name, version,  maintainer info, and package description.
 
-🛠️ Installation: Source .bash_h 
+🛠️ Installation: Source .bash_ca
  
 🛠️ Usage Basic: 
 
-     h without an argument uses history to lookup the last command ran.
-     h <command> gives you info about a specific command.
+     ca without an argument uses history to lookup the last command ran.
+     ca <command> gives you info about a specific command.
      Examples: 
-     h grep  
-     h which
-     h awk
-     h then
-     h 'sudo cp'  # output can get long, i might change this
+     ca grep  
+     ca which
+     ca awk
+     ca then
+     ca 'sudo cp'  # output can get long, i might change this
      Analyze history references:
-     h !42 
+     ca !42 
 
-💡 Tips Use h when a command behaves unexpectedly. Use it to debug PATH issues or command conflicts. Use it when aliases or functions override global tools. Use it to audit your environment for security problems Or simply use it to explore Bash internals
+💡 Tips Use ca when a command behaves unexpectedly. Use it to debug PATH issues or command conflicts. Use it when aliases or functions override global tools. Use it to audit your environment for security problems Or simply use it to explore Bash internals
 
 ------------------------------------------------------------------------------------------------------------------
 
-But thats all a bunch of crap, this is really an over ambitious help tool: 
+📦 h — A Buggy (But Ambitious) Bash help tool
+
+h is very BASH specific, and Debian specific. Should work on Debian based distributions like Ubuntu, and Linux Mint. 
+
+h as become a full fledged command resolution engine that provides help info from various sources.  
+by using common flags such as --help -help -h -? 
+help for builtins available available via help - 'help exit'
+For edge case keywords eithout help info a brief description is provided.
+and as a backup, checks if a man page or an info page exists and alerts the user.
+
 
 V1.0.0 was a small alias: alias h='eval "$(history -p \!\! | awk '\''{print $1}'\'')" --help'
 
@@ -66,7 +75,3 @@ V3.0.0
       For builtins and some keywords use 'help "command"'
       As a fallback, checks if a man page exists and alerts the user.
       For aliases, functions and scripts - handle displaying contents.
-      Then feature creep got away from me and Now I have this 1200+ line mess in BASH.
-      Plus! it's 2025, so the parser, and pipeline handling are vibe coded! (chatgpt sucks)
-      this is just a side project for me, not sure if it will ever work right,
-      but someone might find this useful and decide to fix/fork it.

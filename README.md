@@ -55,7 +55,7 @@ V3.0.0
       I decided to rewrite h so that i could get help from multiple sources.  
       Using common flags like '<command> --help', -help, -h, or -?.  
       For builtins and some keywords use 'help "command"'  
-      As a fallback, checks if a man page exists and alerts the user.  
+      As a fallback, checks for both man pages and info pages then alerts the user if found.
       For aliases, functions and scripts - handle displaying contents.  
 
 

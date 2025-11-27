@@ -139,7 +139,7 @@ h() {
     esac
     
     if [[ "$cmd" == "h" ]]; then # h didnt work above consistantly... 
-        _h-usage # prevent spamming terminal with script.
+        _h_usage # prevent spamming terminal with script.
         return 0
     fi
     # -------------------------------------------------------------------------
@@ -650,8 +650,8 @@ _h_highlight_script() {
 # Usage   : _h_check_dependencies needed_deps optional_deps [EXIT_ON_MISSING] 0or1
 #------------------------------------------------------------------------
 
-needed_deps=(grep sed head readlink file ldd getcap)
-optional_deps=(find realpath cut awk xargs tput)
+needed_deps=(grep sed cut head readlink realpath)
+optional_deps=(tput)
 
 _h_check_dependencies() {
     local -n required="$1"    # Required dependencies (pass by name)

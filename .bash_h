@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 #------------------------------------------------------------------------
-# .bash_h
+# h.sh  aka .bash_h
 # Main Function: h
-# Purpose: bash help system
+# Purpose: bash help system give the user some idea of whats happening for any command they run.
 #------------------------------------------------------------------------
 # If not running interactively, don't do anything
 case $- in
@@ -17,8 +17,8 @@ declare -gA __H_SEEN_ALIASES
 declare -gA __H_SEEN_COMMANDS
 declare -gA __H_SEEN_BUILTINS
 declare -gA __H_SHADOW_SEEN
-declare -gA __H_VISITED        # NEW: global visited set for recursion protection
-declare -g suppress_builtin_msg=1   # suppress repeated builtin help
+declare -gA __H_VISITED        
+declare -g suppress_builtin_msg=1   
 complete -F _h_completion h
 
 h() {
@@ -37,7 +37,7 @@ h() {
     if (( depth == 0 )); then
         trap 'PATH="$OLD_PATH"' RETURN
 
-        local admin_dirs=(
+    local admin_dirs=(
             "$HOME/.local/bin"
             "$HOME/bin/scripts"
             "$HOME/bin"
@@ -49,14 +49,27 @@ h() {
             "/usr/games"
             "/bin"
             "/sbin"   
+            "$HOME/.cargo/bin"
+            "$HOME/.npm-global/bin"
+            "$HOME/.local/share/bash-completion/bin"
+            "$BASH_ENV"
+            "/opt/bin"
+            "/opt/sbin"
+            "/snap/bin"
+            "/flatpak/bin"
+            "$CONDA_PREFIX/bin"
             )
-    
-        # Add admin dirs to PATH if missing
-        for dir in "${admin_dirs[@]}"; do
-            if [[ -d "$dir" && ":$PATH:" != *":$dir:"* ]]; then
-                PATH="$PATH:$dir"
-            fi
-        done
+            
+    # Add admin dirs to PATH if missing
+    for dir in "${admin_dirs[@]}"; do
+        if [[ -d "$dir" && ":$PATH:" != *":$dir:"* ]]; then
+            PATH="$PATH:$dir"
+        fi
+    done
+    while IFS= read -r d; do
+        [[ -d "$d" && ":$PATH:" != *":$d:"* ]] && PATH="$PATH:$d"
+    done < <(find $HOME/.local/bin -type d 2>/dev/null)
+
         export PATH
    
         # -------------------------
@@ -392,14 +405,14 @@ _h_usage() {
     cat <<'EOF'
 
      Usage:  h [command]  
-     Analyzes a Bash command, alias, builtin, function, or binary — showing where it’s defined,
-     how it expands, and what help or documentation is available.
+     Analyzes a Bash cli command, alias, builtin, function, or binary — showing where it’s 
+     defined, how it expands, and what help or documentation is available.
 
      Options:
            -h --help or h      Show this help text.
            -v --version        Show version information.
            -f|--fzf            Use fzf to interactivly search for commands
-           
+                       
      Examples:
            h                   # Automatically analyzes your most recent command
            h awk               # Analyzes 'awk'
@@ -420,7 +433,7 @@ EOF
 _h_ver() {
     cat <<'EOF'
 
-     h v3.0.0 — Bash help tool
+     h v3.0.2 — Bash help tool
      Author : John Blair
      Updated: 2025-11-10  
           
@@ -457,9 +470,44 @@ _h_completion() {
     local cur="${COMP_WORDS[COMP_CWORD]}"
     local commands
 
+    local admin_dirs=(
+            "$HOME/.local/bin"
+            "$HOME/bin/scripts"
+            "$HOME/bin"
+            "/usr/local/bin"
+            "/usr/local/sbin"
+            "/usr/local/games"
+            "/usr/bin"
+            "/usr/sbin"        
+            "/usr/games"
+            "/bin"
+            "/sbin"   
+            "$HOME/.cargo/bin"
+            "$HOME/.npm-global/bin"
+            "$HOME/.local/share/bash-completion/bin"
+            "$BASH_ENV"
+            "/opt/bin"
+            "/opt/sbin"
+            "/snap/bin"
+            "/flatpak/bin"
+            "$CONDA_PREFIX/bin"
+            )
+            
+    # Add admin dirs to PATH if missing
+    for dir in "${admin_dirs[@]}"; do
+        if [[ -d "$dir" && ":$PATH:" != *":$dir:"* ]]; then
+            PATH="$PATH:$dir"
+        fi
+    done
+    
+    while IFS= read -r d; do
+        [[ -d "$d" && ":$PATH:" != *":$d:"* ]] && PATH="$PATH:$d"
+    done < <(find $HOME/.local/bin -type d 2>/dev/null)
+    
     # Collect possible completions: aliases, functions, builtins, and executables in PATH
     commands=$(compgen -A function -A alias -A builtin -A command -- "$cur")
-
+    
+    PATH="$OLD_PATH" 
     # Return completions
     COMPREPLY=( $(compgen -W "$commands" -- "$cur") )
 }

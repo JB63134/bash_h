@@ -1,4 +1,6 @@
-V3.0.5 cleanup and switch highlighting to use a perl heredoc instead of unreliable sed.
+V3.0.2
+     Switch highlighting to use a perl heredoc instead of unreliable sed.
+     Enhanced <TAB> completion, and PATH detection.
 
 V3.0.0 I decided to rewrite h so that i could get help from multiple sources.
        Using common flags like ' --help', -help, -h, or -?.

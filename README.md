@@ -28,6 +28,7 @@ Download `.bash_h` and source it in your `.bashrc`:
 
 
 h is very BASH specific, and GNU specific. 
+Compatability table:
 
 | System                | Works? | Notes                                     |
 | --------------------- | ------ | ----------------------------------------- |

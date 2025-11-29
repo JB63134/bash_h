@@ -29,13 +29,19 @@ Download `.bash_h` and source it in your `.bashrc`:
 
 h is very BASH specific, and GNU specific. 
 
-Fully Works (native, no changes):
-All major Linux distros with GNU userland and Bash ≥ 4.3 such as:  
-Debian / Fedora / Arch / openSUSE
+| System                | Works? | Notes                                     |
+| --------------------- | ------ | ----------------------------------------- |
+| Ubuntu / Debian       | ✅      | Fully supported                           |
+| Fedora / RHEL / Rocky | ✅      | Fully supported                           |
+| Arch / Manjaro        | ✅      | Fully supported                           |
+| Gentoo                | ✅      | Fully supported                           |
+| openSUSE              | ✅      | Fully supported                           |
+| macOS                 | ⚠️     | Needs GNU utilities installed             |
+| FreeBSD / OpenBSD     | ⚠️     | Needs Bash + GNU utils                    |
+| Alpine                | ❌      | Unless user installs bash + GNU coreutils |
+| BusyBox environments  | ❌      | Too limited                               |
+| Dash, ksh, zsh        | ❌      | Script is bash-only                       |
 
-Works With Minor Fix (install GNU tools):  
-macOS (Homebrew GNU tools + brew bash)  
-FreeBSD (pkg GNU tools + bash)
 
 --------------------------------------------------------------------------------------------
 
@@ -61,15 +67,3 @@ V3.0.0
 
 ------------------------------------------------------------------------------------------------------------------
 
-| System                | Works? | Notes                                     |
-| --------------------- | ------ | ----------------------------------------- |
-| Ubuntu / Debian       | ✅      | Fully supported                           |
-| Fedora / RHEL / Rocky | ✅      | Fully supported                           |
-| Arch / Manjaro        | ✅      | Fully supported                           |
-| Gentoo                | ✅      | Fully supported                           |
-| openSUSE              | ✅      | Fully supported                           |
-| macOS                 | ⚠️     | Needs GNU utilities installed             |
-| FreeBSD / OpenBSD     | ⚠️     | Needs Bash + GNU utils                    |
-| Alpine                | ❌      | Unless user installs bash + GNU coreutils |
-| BusyBox environments  | ❌      | Too limited                               |
-| Dash, ksh, zsh        | ❌      | Script is bash-only                       |

@@ -61,3 +61,15 @@ V3.0.0
 
 ------------------------------------------------------------------------------------------------------------------
 
+| System                | Works? | Notes                                     |
+| --------------------- | ------ | ----------------------------------------- |
+| Ubuntu / Debian       | ✅      | Fully supported                           |
+| Fedora / RHEL / Rocky | ✅      | Fully supported                           |
+| Arch / Manjaro        | ✅      | Fully supported                           |
+| Gentoo                | ✅      | Fully supported                           |
+| openSUSE              | ✅      | Fully supported                           |
+| macOS                 | ⚠️     | Needs GNU utilities installed             |
+| FreeBSD / OpenBSD     | ⚠️     | Needs Bash + GNU utils                    |
+| Alpine                | ❌      | Unless user installs bash + GNU coreutils |
+| BusyBox environments  | ❌      | Too limited                               |
+| Dash, ksh, zsh        | ❌      | Script is bash-only                       |

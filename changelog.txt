@@ -1,3 +1,8 @@
+V3.0.8
+     code cleanup. ui bug fixes.
+     PATH manipulation code consolidated, broken out to a function
+     PATH restoration handled by new function and a trap on return
+
 V3.0.2
      Switch highlighting to use a perl heredoc instead of unreliable sed.
      Enhanced <TAB> completion, and PATH detection.

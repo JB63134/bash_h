@@ -546,13 +546,18 @@ _h_sourcedtree() {
     depth=0
     max_depth="${MAX_DEPTH:-5}"
     
-    files=(/etc/profile ~/.bash_profile ~/.bash_login ~/.profile /etc/bash.bashrc /etc/bashrc ~/.bashrc $BASH_ENV ~/.bash_aliases ~/.bash_functions ~/.bash_exports ~/.bash_local /usr/share/bash-completion/bash_completion ~/.local/share/bash-completion/bash_completion ~/.oh-my-bash/oh-my-bash.sh ~/.bash_it/bash_it.sh ~/.bash_env) 
-    
-    # Add profile.d scripts manually and safely
-    if [[ -d /etc/profile.d ]]; then
-        files+=( /etc/profile.d/*.sh )
-    fi
+    files=($BASH_ENV) 
 
+if shopt -q login_shell; then
+    [[ -d /etc/profile.d ]] && files+=( /etc/profile.d/*.sh )
+    [[ -f /etc/profile && -r /etc/profile ]] && files+=( /etc/profile )
+else
+    # Non-login interactive shell
+    [[ -d /etc/bash.bashrc.d ]] && files+=( /etc/bash.bashrc.d/*.sh )
+    [[ -f ~/.bashrc && -r ~/.bashrc ]] && files+=( ~/.bashrc )
+    [[ -f /etc/bash.bashrc && -r /etc/bash.bashrc ]] && files+=( /etc/bash.bashrc )
+fi
+    
     for file in "${files[@]}"; do
         _h_sourcedtree_single "$file" "$depth" "$max_depth"
     done

@@ -2,7 +2,8 @@
 #------------------------------------------------------------------------
 # h.sh  aka .bash_h
 # Main Function: h
-# Purpose: bash help system give the user some idea of whats happening for any command they run.
+# Purpose: bash help tool give the user some idea of
+#          whats happening for any command they run.
 #------------------------------------------------------------------------
 # If not running interactively, don't do anything
 case $- in
@@ -35,43 +36,8 @@ h() {
     # set new path, clean arrays, and greet user once
     # -------------------------
     if (( depth == 0 )); then
-        trap 'PATH="$OLD_PATH"' RETURN
-
-    local admin_dirs=(
-            "$HOME/.local/bin"
-            "$HOME/bin/scripts"
-            "$HOME/bin"
-            "/usr/local/bin"
-            "/usr/local/sbin"
-            "/usr/local/games"
-            "/usr/bin"
-            "/usr/sbin"        
-            "/usr/games"
-            "/bin"
-            "/sbin"   
-            "$HOME/.cargo/bin"
-            "$HOME/.npm-global/bin"
-            "$HOME/.local/share/bash-completion/bin"
-            "$BASH_ENV"
-            "/opt/bin"
-            "/opt/sbin"
-            "/snap/bin"
-            "/flatpak/bin"
-            "$CONDA_PREFIX/bin"
-            )
-            
-    # Add admin dirs to PATH if missing
-    for dir in "${admin_dirs[@]}"; do
-        if [[ -d "$dir" && ":$PATH:" != *":$dir:"* ]]; then
-            PATH="$PATH:$dir"
-        fi
-    done
-    while IFS= read -r d; do
-        [[ -d "$d" && ":$PATH:" != *":$d:"* ]] && PATH="$PATH:$d"
-    done < <(find $HOME/.local/bin -type d 2>/dev/null)
-
-        export PATH
-   
+        trap '_h_restore_path' RETURN
+        _h_add_admin_paths
         # -------------------------
         # Check dependencies
         _h_check_dependencies needed_deps optional_deps 1  # 1 = exit if required deps missing
@@ -133,30 +99,38 @@ h() {
     # -------------------------------------------------------------------------
     # handle arguments for h
     # -------------------------------------------------------------------------
+ 
+    local fzffound=0
+    if command -v fzf &>/dev/null; then
+        fzffound=1
+    fi
+    
     case "$cmd" in
         -h|--help) _h_usage; return 0;;
         -v|--version) _h_ver; return 0;;
         -f|--fzf)
-            if ! command -v fzf &>/dev/null; then
-                printf "fzf not installed\n"
-                return 1
-            fi
-
-            local pick
-            pick=$(compgen -A function -A alias -A builtin -A command | sort -u | fzf --prompt="Get help for: ")
-
-            [[ -n "$pick" ]] || return 1
-            h "$pick"
-            return 0
-            ;;        
+            if (( fzffound == 1 )); then 
+                local pick
+                pick=$(compgen -A function -A alias -A builtin -A command | sort -u | fzf --prompt="Get help for: ")
+                [[ -n "$pick" ]] || return 1
+                ca "$pick"
+                return 0
+            else
+                printf "%s    ↳ ${YELLOW}fzf is not installed.${RESET}\n" "$indent"
+                printf "\n"
+                _h_usage;
+                return 0
+            fi  
+            ;; 
     esac
     
     if [[ "$cmd" == "h" ]]; then # h didnt work above consistantly... 
         _h_usage # prevent spamming terminal with script.
         return 0
     fi
+    
     # -------------------------------------------------------------------------
-    # Handle edge case for a keyword here, before it becomes an issue in later code
+    # Handle Edge case that fails with type. catch it here to avoid a crash later.
     # ------------------------------------------------------------------------- 
     if [[ "$cmd" == "]" ]]; then
         printf "%s├─ Detected BASH Keyword ${CYAN}'%s' ${RESET}\n" "$indent" "$cmd"
@@ -171,7 +145,6 @@ h() {
     if [[ -z "$ctype" ]]; then
         printf "%s├─ ${RED}Unknown or invalid command:${CYAN} '%s'${RESET}\n" "$indent" "$cmd"
         printf "%s    ↳ Check your spelling and try again\n\n" "$indent" 
-        export OLD_PATH
         return 1
     fi
 
@@ -226,34 +199,33 @@ h() {
         fi
     fi
 
-# -------------------------------------------------------------------------
-# Builtins
-# -------------------------------------------------------------------------
-if [[ "$ctype" == "builtin" ]]; then
+    # -------------------------------------------------------------------------
+    # Builtins
+    # -------------------------------------------------------------------------
+    if [[ "$ctype" == "builtin" ]]; then
     
-    # Special builtins: `builtin` and `command`
-    if [[ "$cmd" == "builtin" || "$cmd" == "command" ]]; then    
+        # Special builtins: `builtin` and `command`
+        if [[ "$cmd" == "builtin" || "$cmd" == "command" ]]; then    
         
-        # Case: user typed plain `builtin` or `command`
-        if (( ${#fcmd[@]} == 1 )); then
-            printf "%s├─ ${CYAN}'%s'${RESET} is a shell builtin\n" "$indent" "$cmd"
-            printf "%s    ↳ Showing  ${CYAN}'help %s'${RESET}:\n\n" \
-                "$indent" "$cmd"
-            help "$cmd" 2>/dev/null | sed 's/^/    /'
-            return 0
+            # Case: user typed plain `builtin` or `command`
+            if (( ${#fcmd[@]} == 1 )); then
+                printf "%s├─ ${CYAN}'%s'${RESET} is a shell builtin\n" "$indent" "$cmd"
+                printf "%s    ↳ Showing  ${CYAN}'help %s'${RESET}:\n\n" "$indent" "$cmd"
+                help "$cmd" 2>/dev/null | sed 's/^/    /'
+                return 0
+            fi
+            return 0    
         fi
-        return 0    
-    fi
     
-    # Normal builtin
-    printf "%s├─ ${CYAN}'%s'${RESET} is a shell builtin\n" "$indent" "$cmd"
+        # Normal builtin
+        printf "%s├─ ${CYAN}'%s'${RESET} is a shell builtin\n" "$indent" "$cmd"
+    
+        # Show help
+        printf "%s    ↳ Showing ${CYAN}'help %s'${RESET}:\n\n" "$indent" "$cmd"
+        help "$cmd" 2>/dev/null | sed "s/^/$indent        /"
 
-    # Show help
-    printf "%s    ↳ Showing ${CYAN}'help %s'${RESET}:\n\n" "$indent" "$cmd"
-    help "$cmd" 2>/dev/null | sed "s/^/$indent        /"
-
-    return 0
-fi
+        return 0
+    fi
         
     # -------------------------------------------------------------------------
     # Functions
@@ -269,11 +241,11 @@ fi
 
         (( !was_extdebug )) && shopt -u extdebug  # Restore extdebug state if we enabled it
         #---------------------------- 
-        
+
         printf "%s├─ ${CYAN}'%s' ${RESET}is a shell function\n" "$indent" "$cmd"
         printf "%s    ↳ Declared in: ${CYAN}%s (line %s)${RESET}\n" "$indent" "$file" "$line"
         printf "%s    ↳ Showing function: ${CYAN}%s${RESET}\n\n"  "$indent" "$cmd"        
-        func_content=$(declare -f "$cmd")
+        local func_content=$(declare -f "$cmd")
         _h_highlight_script "$func_content" "$indent"
         printf "\n%s    ─── End of function '%s' ───\n" "$indent" "$cmd"    
         return 0
@@ -288,7 +260,7 @@ fi
         __H_SEEN_ALIASES["$cmd"]=1
     
         # Get the alias expansion (strip surrounding quotes)
-        raw=$(alias "$cmd")
+        local raw=$(alias "$cmd")
         alias_expansion=${raw#*=}         # remove 'name='
         alias_expansion=${alias_expansion:1:${#alias_expansion}-2}   # trim outer quotes
 
@@ -335,7 +307,7 @@ fi
         }
         local cmd_real formatted_type             
         cmd_real=$(readlink -f "$cmd_path" 2>/dev/null || echo "$cmd_path")
-        file_info=$(file -b "$cmd_real")
+        local file_info=$(file -b "$cmd_real")
         
         printf "%s├─ ${CYAN}'%s' ${RESET}is an external command\n" "$indent" "$cmd"
         printf "%s    ↳ Path: ${CYAN}%s${RESET}\n" "$indent" "$cmd_path"    
@@ -345,10 +317,19 @@ fi
             cmd_path="$cmd_real"
         fi
 
+        local perlfound=0
+        if command -v perl &>/dev/null; then
+            perlfound=1
+        fi
+        
         # Show script contents if text executable
         if [[ "$file_info" == *"script"* || "$file_info" == *"text executable"* ]]; then
-            printf "%s    ↳ Showing script ${CYAN}'%s'${RESET}:\n\n" "$indent" "$cmd"
+            printf "%s    ↳ Showing script ${CYAN}'%s'${RESET}:\n" "$indent" "$cmd"
+            if (( perlfound == 0 )); then 
+                printf "%s    ↳ ${YELLOW}Optional dependency 'perl' missing — syntax highlighting reduced${RESET}\n" "$indent" 
+            fi
             if [[ -r "$cmd_path" ]]; then
+                printf "\n"
                 _h_highlight_script "$cmd_path" "$indent" 
                 printf "\n\n%s    ─── End of script '%s' ───\n" "$indent" "$cmd"
             fi
@@ -378,7 +359,7 @@ fi
             if command -v man &>/dev/null && man -w "$cmd_only" &>/dev/null; then
                 printf "%s    ↳ Manual available via${CYAN} 'man %s'${RESET}\n" "$indent" "$cmd_only"
             elif command -v info &>/dev/null && info "$cmd_only" &>/dev/null; then
-                printf "%s    ↳ Info page available via ${CYAN}'info %s'${RESET}\n" "$indent" "$cmd_only"
+                printf "%s    ↳ Info page available via ${CYAN}'info %s'${RESET}\n" "$indent" "$cmd_only" 
             else 
                 hout=$(help "$cmd" 2>&1)
                 # Filter known useless help output
@@ -390,15 +371,13 @@ fi
                 fi
             fi
         fi
-    
-        export OLD_PATH 
         return 0
     fi
    
 }
  
 #------------------------------------------------------------------------
-# Function: _h-usage
+# Function: _h_usage
 # Purpose : Display usage information and examples for the `h` command analyzer.
 #------------------------------------------------------------------------
 _h_usage() {
@@ -411,7 +390,7 @@ _h_usage() {
      Options:
            -h --help or h      Show this help text.
            -v --version        Show version information.
-           -f|--fzf            Use fzf to interactivly search for commands
+           -f --fzf            Use fzf to interactivly search for commands
                        
      Examples:
            h                   # Automatically analyzes your most recent command
@@ -421,7 +400,7 @@ _h_usage() {
      Features:
        • Handles builtins, aliases, keywords, functions, and external commands
        • Syntax-highlighted preview of functions and scripts
-       • Shows --help/-help/-h/-? output or points to man/info pages
+       • Shows --help/-help/-h/-? output or points to man/info/tldr pages
   
 EOF
 }
@@ -433,7 +412,7 @@ EOF
 _h_ver() {
     cat <<'EOF'
 
-     h v3.0.2 — Bash help tool
+     h v3.0.8 — Bash help tool
      Author : John Blair
      Updated: 2025-11-10  
           
@@ -463,17 +442,26 @@ EOF
 }
 
 #------------------------------------------------------------------------
-# Function: _h_completion
-# Purpose : Enable tab completion for entering commands 
+# Function: _h_add_admin_paths
+# Purpose: Add ~/.local/bin paths safely and temporarily
 #------------------------------------------------------------------------
-_h_completion() {
-    local cur="${COMP_WORDS[COMP_CWORD]}"
-    local commands
+_h_add_admin_paths() {
+    # Save PATH if not already saved 
+    if [[ -z "$OLD_PATH" ]]; then
+        OLD_PATH="$PATH"
+    fi
 
     local admin_dirs=(
             "$HOME/.local/bin"
             "$HOME/bin/scripts"
             "$HOME/bin"
+            "$HOME/.cargo/bin"
+            "$HOME/.npm-global/bin"
+            "$HOME/.local/share/bash-completion/bin"
+            "$BASH_ENV"
+            "$CONDA_PREFIX/bin"
+            "/flatpak/bin"         
+            "/snap/bin"
             "/usr/local/bin"
             "/usr/local/sbin"
             "/usr/local/games"
@@ -481,16 +469,9 @@ _h_completion() {
             "/usr/sbin"        
             "/usr/games"
             "/bin"
-            "/sbin"   
-            "$HOME/.cargo/bin"
-            "$HOME/.npm-global/bin"
-            "$HOME/.local/share/bash-completion/bin"
-            "$BASH_ENV"
+            "/sbin"  
             "/opt/bin"
-            "/opt/sbin"
-            "/snap/bin"
-            "/flatpak/bin"
-            "$CONDA_PREFIX/bin"
+            "/opt/sbin"         
             )
             
     # Add admin dirs to PATH if missing
@@ -502,14 +483,36 @@ _h_completion() {
     
     while IFS= read -r d; do
         [[ -d "$d" && ":$PATH:" != *":$d:"* ]] && PATH="$PATH:$d"
-    done < <(find $HOME/.local/bin -type d 2>/dev/null)
+    done < <(find "$HOME/.local/bin" -type d 2>/dev/null)
+}
+
+#------------------------------------------------------------------------
+# Function: _h_restore_path
+# Automatically restore PATH when leaving scope
+#------------------------------------------------------------------------
+_h_restore_path() {
+    if [[ -n "$OLD_PATH" ]]; then
+        PATH="$OLD_PATH"
+        unset OLD_PATH
+    fi
+}
+
+#------------------------------------------------------------------------
+# Function: _h_completion
+# Purpose : Enable tab completion for entering commands 
+#------------------------------------------------------------------------
+_h_completion() {
+    local cur="${COMP_WORDS[COMP_CWORD]}"
+    local commands
     
+    trap '_h_restore_path' RETURN
+    _h_add_admin_paths
+   
     # Collect possible completions: aliases, functions, builtins, and executables in PATH
-    commands=$(compgen -A function -A alias -A builtin -A command -- "$cur")
-    
-    PATH="$OLD_PATH" 
-    # Return completions
-    COMPREPLY=( $(compgen -W "$commands" -- "$cur") )
+    mapfile -t commands < <(compgen -A function -A alias -A builtin -A command -- "$cur")
+
+    # Provide them to bash-completion
+    COMPREPLY=("${commands[@]}")
 }
 
 #------------------------------------------------------------------------
@@ -543,9 +546,12 @@ _h_sourcedtree() {
     depth=0
     max_depth="${MAX_DEPTH:-5}"
     
-    shopt -s nullglob
-    files=(~/.bash_profile ~/.bash_login ~/.profile ~/.bashrc ~/.bash_aliases ~/.bash_functions ~/.bash_exports ~/.bash_local ~/.local/share/bash-completion/bash_completion /etc/profile /etc/bash.bashrc /etc/bashrc /usr/share/bash-completion/bash_completion ~/.config/bash/bashrc ~/.bash/bashrc ~/.dotfiles/bash/ ~/.dotfiles/bashrc ~/.oh-my-bash/oh-my-bash.sh ~/.bash_it/bash_it.sh ~/.conda/etc/profile.d/conda.sh ~/.config ~/.bash_env /etc/profile.d/*.sh $BASH_ENV) 
-    shopt -u nullglob
+    files=(/etc/profile ~/.bash_profile ~/.bash_login ~/.profile /etc/bash.bashrc /etc/bashrc ~/.bashrc $BASH_ENV ~/.bash_aliases ~/.bash_functions ~/.bash_exports ~/.bash_local /usr/share/bash-completion/bash_completion ~/.local/share/bash-completion/bash_completion ~/.oh-my-bash/oh-my-bash.sh ~/.bash_it/bash_it.sh ~/.bash_env) 
+    
+    # Add profile.d scripts manually and safely
+    if [[ -d /etc/profile.d ]]; then
+        files+=( /etc/profile.d/*.sh )
+    fi
 
     for file in "${files[@]}"; do
         _h_sourcedtree_single "$file" "$depth" "$max_depth"
@@ -763,8 +769,8 @@ PERL_CODE
 # Usage   : _h_check_dependencies needed_deps optional_deps [EXIT_ON_MISSING] 0or1
 #------------------------------------------------------------------------
 
-needed_deps=(grep sed cut head readlink realpath)
-optional_deps=(tput perl fzf)
+needed_deps=(grep basename file find sed cut head readlink realpath)
+optional_deps=(tput perl fzf man info )
 
 _h_check_dependencies() {
     local -n required="$1"    # Required dependencies (pass by name)
@@ -781,22 +787,14 @@ _h_check_dependencies() {
 
     # Check optional dependencies
     for cmd in "${optional[@]}"; do
-        command -v "$cmd" >/dev/null 2>&1 || missing_optional+=("$cmd")
+        command -v "$cmd" >/dev/null 2>&1 
     done
 
     # Report missing required deps
     if (( ${#missing_required[@]} )); then
         printf "${RED}Warning: Missing REQUIRED tools: %s${RESET}\n" "${missing_required[*]}"
-        printf "Some core features of the script may not work!\n"
         (( exit_on_missing )) && { printf "Exiting due to missing core dependencies.\n"; exit 1; }
     fi
-
-    # Report missing optional deps
-    if (( ${#missing_optional[@]} )); then
-        printf "${YELLOW}Note: Missing optional tools: %s${RESET}\n" "${missing_optional[*]}"
-        printf "Some optional features may not work.\n"
-    fi
-
 }
 
 #------------------------------------------------------------------------

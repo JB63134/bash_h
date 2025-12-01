@@ -99,7 +99,6 @@ h() {
     # -------------------------------------------------------------------------
     # handle arguments for h
     # -------------------------------------------------------------------------
- 
     local fzffound=0
     if command -v fzf &>/dev/null; then
         fzffound=1
@@ -775,7 +774,7 @@ PERL_CODE
 #------------------------------------------------------------------------
 
 needed_deps=(grep basename file find sed cut head readlink realpath)
-optional_deps=(tput perl fzf man info )
+optional_deps=(tput perl fzf man info)
 
 _h_check_dependencies() {
     local -n required="$1"    # Required dependencies (pass by name)

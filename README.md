@@ -112,12 +112,11 @@ h -v | --version  # Show version info
 
 **Required**:
 
-* `grep`, `basename`, `file`, `find`, `sed`, `cut`, `head`, `readlink`, `realpath`
+* `grep`, `basename`, `file`, `find`, `sed`, `cut`, `head`, `readlink`, `realpath`, `perl`
 
 **Optional (enhanced experience)**:
 
 * `tput` – colorful output
-* `perl` – syntax highlighting
 * `fzf` – interactive search
 * `man`, `info` – manual/info pages
 * `batcat` – syntax highlighting

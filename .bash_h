@@ -54,7 +54,9 @@ h() {
         #--------------------------
         # Greeting
         #--------------------------
-        printf "\n├─ h - a BASH help tool\n"
+        printf "\n╔══════════════════════════════════════════════╗\n"
+        printf "║   h – Bash Help Tool                         ║\n"
+        printf "╚══════════════════════════════════════════════╝\n"
     fi 
     
     # -------------------------
@@ -411,7 +413,7 @@ EOF
 _h_ver() {
     cat <<'EOF'
 
-     h v3.0.8 — Bash help tool
+     h v3.0.9 — Bash help tool
      Author : John Blair
      Updated: 2025-11-10  
           
@@ -627,19 +629,6 @@ _h_expand_path() {
 #------------------------------------------------------------------------
 # Function: _h_highlight_script   # _h_highlight_script "$path-to-script" "<blankspaces>"
 # Purpose: Modular syntax highlighting with indentation based on string in $2
-#
-#        how to add patterns and colors for highlighting
-#
-#  Example usage: To highlight the word forecast in bright magenta:
-#  HIGHLIGHT_PATTERNS+=('\bforecast\b') # your_regex_here
-#  HIGHLIGHT_COLORS+=('\x1b[95m')   # bright magenta - choose the ANSI color
-#
-#  Make sure that HIGHLIGHT_PATTERNS and HIGHLIGHT_COLORS remain aligned by index 
-#  (pattern i uses color i).
-#
-#  Multiple new entries: 
-#  HIGHLIGHT_PATTERNS+=('\bforecast\b' '\bradar\b') # Highlight 'forecast' and 'radar'
-#  HIGHLIGHT_COLORS+=('\x1b[95m' '\x1b[92m')  # bright magenta & bright green
 #------------------------------------------------------------------------
 _h_highlight_script() {
     local input="$1"
@@ -652,69 +641,12 @@ _h_highlight_script() {
     else
         code="$input"
     fi
-
-    # Check if Perl is installed if not use sed
-    if ! command -v perl &>/dev/null; then
-        local highlighted
-        local use_color=1
-        local esc=$'\x1b'
-
-        # Disable color if stdout is not a terminal
-        [[ ! -t 1 ]] && use_color=0
-
-        # Read content safely
-        if [[ -f "$input" ]]; then
-            highlighted=$(<"$input")
-        else
-            highlighted="$input"
-        fi
-
-            # Highlight patterns
-        declare -a HIGHLIGHT_PATTERNS=(
-            '#.*'                                 # comments
-            '"[^"]*"|'\''[^'\'']*'\'''            # strings
-            '\$\([^)]*\)|`[^`]*`'                 # subshells
-            '\b(local|declare|export|typeset)\b'  # declarations
-            '\b(if|then|else|elif|fi|for|while|do|done|until|select|case|esac|break|continue)\b' # control
-            '\b(function|return|exit|trap|shift|read|mapfile|set|unset)\b' # builtins
-            '\b(printf|echo|mkdir|find|grep|sed|awk|cut|sort|head|tail|xargs|cat|touch|chmod|chown|curl|wget)\b' # commands
-            '\$[A-Za-z0-9_@#*!?_-]+'             # variables
-            '\b[0-9]+(\.[0-9]+)?\b|0x[0-9A-Fa-f]+' # numbers
-            '\[\[|\]\]|\(\(|\)\)|\(|\)|\{|\}'     # brackets/parens/braces
-        )
-
-        declare -a HIGHLIGHT_COLORS=(
-            "${esc}[36m"    # comments — cyan
-            "${esc}[96m"    # strings — bright cyan
-            "${esc}[35m"    # subshells — magenta
-            "${esc}[32m"    # declarations — green
-            "${esc}[93m"    # control — yellow
-            "${esc}[32m"    # builtins — green
-            "${esc}[35m"    # common commands — magenta
-            "${esc}[33m"    # variables — yellow
-            "${esc}[34m"    # numbers — blue
-            "${esc}[37m"    # brackets — gray
-        )
-
-        # Disable colors if needed
-        if (( use_color == 0 )); then
-            for i in "${!HIGHLIGHT_COLORS[@]}"; do
-                HIGHLIGHT_COLORS[$i]=""
-            done
-        fi
-
-        # Apply highlighting patterns
-        for i in "${!HIGHLIGHT_PATTERNS[@]}"; do
-            local pattern="${HIGHLIGHT_PATTERNS[$i]}"
-            local color="${HIGHLIGHT_COLORS[$i]}"
-            highlighted=$(echo "$highlighted" | sed -E "s/($pattern)/${color}\1${esc}[0m/g")
-        done
-
-        # Print with indentation
-        printf "%s\n" "$highlighted" | sed "s/^/$indent    /"
+    
+    if command -v batcat &>/dev/null && [[ -f "$input" ]]; then
+        batcat --color=always --paging=never "$input" | sed "s/^/$indent/"
         return
     fi
-    
+
     perl - "$code" "$indent" <<'PERL_CODE'
 use strict;
 use warnings;

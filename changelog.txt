@@ -1,3 +1,7 @@
+V33.0.10
+     code cleanup. ui bug fixes.
+     added support for batcat highlighting
+
 V3.0.8
      code cleanup. ui bug fixes. 
      PATH manipulation code consolidated, broken out to a function

@@ -3,39 +3,153 @@
 [![MIT License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Version](https://img.shields.io/badge/version-3.0.10-blue)](https://github.com/JB63134/bash_h/releases)
 
-`h` is a full fledged command resolution engine that unifies help into one shortcut - h   
+`h` is a full fledged command resolution engine that unifies help into one shortcut - h   `h` is a powerful Bash CLI helper that analyzes commands, functions, aliases, builtins, keywords, and external binaries. It helps you understand what a command does, where it is defined, and shows available documentation.
 
 ---
 
 ## Features
 
-- Detects Bash **keywords, builtins, aliases, functions, and external commands**  
-- Shows **where commands/aliases/functions are defined**  
-- Provides help output by iterating through common flags '<command> --help -help -h -?'
-- As a fallback, h checks if a man page or an info page exists and alerts the user.  
-- Syntax-highlights **functions and scripts**  
-- Optional **FZF integration** for interactive selection
+* Analyze **builtins, aliases, keywords, functions, and external commands**.
+* Shows **where a command is defined** (files, line numbers, or shell).
+* Displays **alias expansions** and function contents.
+* Provides **help output** or points to `man` / `info` pages.
+* Syntax-highlighted preview for functions and scripts (`batcat` for enhanced highlighting with fallback to `perl`).
+* Integrates with **fzf** for interactive command search.
+* Automatic detection of commonly used **admin paths**.
+
+---
+## Usage
+
+```bash
+h [command]
+```
+
+* **Analyze last executed command**:
+
+```bash
+h
+```
+
+* **Analyze a specific command**:
+
+```bash
+h ls
+h awk
+```
+
+* **Interactive search with fzf**:
+
+```bash
+h -f
+```
+
+* **Show help**:
+
+```bash
+h -h
+```
+
+* **Show version**:
+
+```bash
+h -v
+```
 
 ---
 
-This has become 2 separate projects as outlined below.
+## Examples
 
+```bash
+04:12:55 Tue Dec 02: ~ $ h awk
 
-| Feature / Scope                | `h` (Bash help)                          | `ca` (Command Analyzer)                                                                |
-| ------------------------------ | ---------------------------------------- | -------------------------------------------------------------------------------------- |
-| **Type detection**             | ✅ Keywords, builtins, aliases, functions | ✅ Keywords, builtins, aliases, functions                                               |
-| **External commands**          | Path + --help, man, info alert            | ✅ Path, symbolic links, binary type, ELF headers, dependencies, permissions             |
-| **Scripts / Functions**        | ✅ Shows content with syntax highlighting | ✅ Shows content with syntax highlighting                                               |
-| **Permissions / Ownership**    | ❌                                        | ✅ Includes SUID/SGID, owner/group, octal permissions                                   |
-| **Shadow / Overrides**         | ❌                                        | ✅ Detects overridden commands, shadowing                                               |
-| **Dependencies / Environment** | ❌                                        | ✅ Checks missing deps, sourced files hierarchy                                         |
-| **Package info**               | ❌                                        | ✅ Version, maintainer, description                                                     |
-| **Interactive search**         | ✅ fzf                                    | ✅ fzf                                                                                  |
-| **Ease of use**                | ✅ Tab Completion                         | ✅ Tab Completion                                                                       |
-| **Focus / Use case**           | Shell-level explanation                  | Deep system/binary inspection                                                          |
+╔══════════════════════════════════════════════╗
+║   h – Bash Help Tool                         ║
+╚══════════════════════════════════════════════╝
+├─ 'awk' is an external command
+    ↳ Path: /usr/bin/awk
+    ↳ Symbolic link to: /usr/bin/mawk
+    ↳ Showing 'mawk --help':
 
+         Usage: mawk [Options] [Program] [file ...]
+         
+         Program:
+             The -f option value is the name of a file containing program text.
+             If no -f option is given, a "--" ends option processing; the following
+             parameters are the program text.
+         
+         Options:
+             -f program-file  Program  text is read from file instead of from the
+                              command-line.  Multiple -f options are accepted.
+             -F value         sets the field separator, FS, to value.
+             -v var=value     assigns value to program variable var.
+             --               unambiguous end of options.
+         
+             Implementation-specific options are prefixed with "-W".  They can be
+             abbreviated:
+         
+             -W version       show version information and exit.
+             -W dump          show assembler-like listing of program and exit.
+             -W help          show this message and exit.
+             -W interactive   set unbuffered output, line-buffered input.
+             -W exec file     use file as program as well as last option.
+             -W posix         stricter POSIX checking.
+             -W random=number set initial random seed.
+             -W sprintf=number adjust size of sprintf buffer.
+             -W traditional   pre-POSIX 2001.
+             -W usage         show this message and exit.
+         
 
+```
 
+```bash
+04:13:01 Tue Dec 02: ~ $ h l
+
+╔══════════════════════════════════════════════╗
+║   h – Bash Help Tool                         ║
+╚══════════════════════════════════════════════╝
+├─ 'l' is an alias → resolves to: alias l='ls -CF'
+    ↳ Defined in: /home/jb/.bash_aliases (line 13)
+
+```
+
+```bash
+04:22:41 Tue Dec 02: ~ $ h o
+
+╔══════════════════════════════════════════════╗
+║   h – Bash Help Tool                         ║
+╚══════════════════════════════════════════════╝
+├─ 'o' is a shell function
+    ↳ Declared in: /home/jb/.bash_functions (line 67)
+    ↳ Showing function: o
+
+    o () 
+    { 
+        for arg in "$@";
+        do
+            setsid xdg-open "$arg" > /dev/null 2>&1 < /dev/null &
+        done
+    }
+
+    ─── End of function 'o' ───
+
+```
+
+---
+
+## Dependencies
+
+**Required**:
+
+* `grep`, `basename`, `file`, `find`, `sed`, `cut`, `head`, `readlink`, `realpath`
+
+**Optional (enhanced experience)**:
+
+* `tput` – colorful output
+* `perl` – syntax highlighting
+* `fzf` – interactive search
+* `man`, `info` – manual/info pages
+* `batcat` – syntax highlighting
+---
 
 ## Installation
 
@@ -85,4 +199,3 @@ V3.0.0
 
 
 ------------------------------------------------------------------------------------------------------------------
-

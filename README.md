@@ -21,40 +21,12 @@
 ## Usage
 
 ```bash
-h [command]
+h [command]       # Analyze the given command
+h                 # Analyze your most‑recent command
+h -f              # Launch interactive search using fzf
+h -h | --help     # Show usage instructions
+h -v | --version  # Show version info
 ```
-
-* **Analyze last executed command**:
-
-```bash
-h
-```
-
-* **Analyze a specific command**:
-
-```bash
-h ls
-h awk
-```
-
-* **Interactive search with fzf**:
-
-```bash
-h -f
-```
-
-* **Show help**:
-
-```bash
-h -h
-```
-
-* **Show version**:
-
-```bash
-h -v
-```
-
 ---
 
 ## Examples

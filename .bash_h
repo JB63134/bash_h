@@ -11,6 +11,11 @@ case $- in
       *) return;;
 esac
 
+# shellcheck disable=SC2034
+ca_needed_deps=(grep basename file find sed cut head readlink realpath dpkg awk ldd getcap perl)
+# shellcheck disable=SC2034
+ca_optional_deps=(tput fzf batcat bat)
+
 MAX_DEPTH=4
 OLD_PATH="$PATH"
 
@@ -19,7 +24,6 @@ declare -gA __H_SEEN_COMMANDS
 declare -gA __H_SEEN_BUILTINS
 declare -gA __H_SHADOW_SEEN
 declare -gA __H_VISITED        
-declare -g suppress_builtin_msg=1   
 complete -F _h_completion h
 
 h() {
@@ -28,8 +32,42 @@ h() {
     # -------------------------
     local fcmd cmd ctype cmd_path alias_expansion RED GREEN CYAN RESET 
     local depth=${2:-0}
-    local cmdline="$*"
-    local indent=$(printf "%*s" $((depth * 4)) "")
+    local indent
+    indent=$(printf "%*s" $((depth * 4)) "")
+    
+    # -------------------------
+    # Colors (tput → ANSI → none)
+    # -------------------------
+    if command -v tput &>/dev/null && [[ $(tput colors 2>/dev/null) -ge 8 ]]; then
+        # Preferred: tput colors
+        RED=$(tput setaf 1)
+        GREEN=$(tput setaf 2)
+        CYAN=$(tput setaf 6)
+        YELLOW=$(tput setaf 11)
+        BPURP=$(tput setaf 13)
+        RESET=$(tput sgr0)
+        UNLINE=$(tput smul)
+        STOPUNLINE=$(tput rmul)
+    else
+        # Fallback: ANSI escape sequences
+        RED='\033[31m'
+        GREEN='\033[32m'
+        CYAN='\033[36m'
+        YELLOW='\033[93m'
+        BPURP='\033[95m'
+        RESET='\033[0m'
+        UNLINE='\033[4m'
+        STOPUNLINE='\033[0m'
+    fi
+ 
+    : "${RED:=}"
+    : "${GREEN:=}"
+    : "${CYAN:=}"
+    : "${YELLOW:=}"
+    : "${BPURP:=}"
+    : "${RESET:=}"
+    : "${UNLINE:=}"
+    : "${STOPUNLINE:=}"
     
     # -------------------------
     # Set first run variables path etc... keep from running every recursive loop 
@@ -40,7 +78,7 @@ h() {
         _h_add_admin_paths
         # -------------------------
         # Check dependencies
-        _h_check_dependencies needed_deps optional_deps 1  # 1 = exit if required deps missing
+        _h_check_dependencies ca_needed_deps ca_optional_deps 1  # 1 = exit if required deps missing
 
         #--------------------------
         # Reset arrays on first run
@@ -58,24 +96,6 @@ h() {
         printf "║   h – Bash Help Tool                         ║\n"
         printf "╚══════════════════════════════════════════════╝\n"
     fi 
-    
-    # -------------------------
-    # Colors (tput → ANSI)
-    # -------------------------
-    local clrs=(RED GREEN CYAN YELLOW RESET BPURP)
-    if command -v tput &>/dev/null && [[ $(tput colors 2>/dev/null) -ge 8 ]]; then
-        # Preferred: tput colors
-        RED=$(tput setaf 1)
-        GREEN=$(tput setaf 2)
-        CYAN=$(tput setaf 6)
-        YELLOW=$(tput setaf 11)
-        BPURP=$(tput setaf 13)
-        RESET=$(tput sgr0)
-    else
-        for c in "${clrs[@]}"; do
-            printf -v "$c" ""
-        done
-    fi
         
     # -------------------------
     # Depth guard
@@ -154,14 +174,19 @@ h() {
     # -------------------------------------------------------------------------
     if [[ "$ctype" == "keyword" ]]; then
         case "$cmd" in
-        if|case|for|select|while|until|function|time|{|[[|coproc)
+        if|case|for|select|while|until|function|time|[[|coproc)
             printf "%s├─ Detected BASH Keyword ${CYAN}'%s' ${RESET}\n" "$indent" "$cmd"
             printf "%s    ↳ Showing  ${CYAN}'help %s'${RESET}:\n\n" "$indent" "$cmd"
             help "$cmd" 2>/dev/null | sed 's/^/    /'
             return 0
             ;;
         esac
-    
+        if [[ "$cmd" == "{" ]]; then
+            printf "%s├─ Detected BASH Keyword ${CYAN}'%s' ${RESET}\n" "$indent" "$cmd"
+            printf "%s    ↳ Showing  ${CYAN}'help %s'${RESET}:\n\n" "$indent" "$cmd"
+            help "$cmd" 2>/dev/null | sed 's/^/    /'
+            return 0
+        fi
         case "$cmd" in
             then|else|elif|fi|do|done|in|!|])
                 description=""
@@ -220,11 +245,9 @@ h() {
     
         # Normal builtin
         printf "%s├─ ${CYAN}'%s'${RESET} is a shell builtin\n" "$indent" "$cmd"
-    
         # Show help
         printf "%s    ↳ Showing ${CYAN}'help %s'${RESET}:\n\n" "$indent" "$cmd"
         help "$cmd" 2>/dev/null | sed "s/^/$indent        /"
-
         return 0
     fi
         
@@ -236,18 +259,32 @@ h() {
         #--------------------------- 
         # Enable extdebug temporarily so declare -F includes file/line info
         local was_extdebug=0
-        shopt -q extdebug && was_extdebug=1 || shopt -s extdebug
+
+        if shopt -q extdebug; then
+            was_extdebug=1
+        else
+            shopt -s extdebug
+        fi
         
-        read _ line file <<< "$(declare -F "$cmd")"
+        read -r _ line file <<< "$(declare -F "$cmd")"
 
         (( !was_extdebug )) && shopt -u extdebug  # Restore extdebug state if we enabled it
         #---------------------------- 
-
-        printf "%s├─ ${CYAN}'%s' ${RESET}is a shell function\n" "$indent" "$cmd"
-        printf "%s    ↳ Declared in: ${CYAN}%s (line %s)${RESET}\n" "$indent" "$file" "$line"
-        printf "%s    ↳ Showing function: ${CYAN}%s${RESET}\n\n"  "$indent" "$cmd"        
-        local func_content=$(declare -f "$cmd")
+        
+        printf "%s├─ ${CYAN}'%q' ${RESET}is a shell function\n" "$indent" "$cmd"
+        
+        if [[ "$file" == "main" ]]; then
+            printf "%s    ↳ Declared in: ${CYAN}interactive shell (not from a file)${RESET}\n" "$indent"
+        else
+            printf "%s    ↳ Declared in: ${CYAN}%s (line %s)${RESET}\n" "$indent" "$file" "$line"
+        fi
+        
+        printf "%s    ↳ Showing function: ${CYAN}%s${RESET}\n\n"  "$indent" "$cmd"     
+           
+        local func_content
+        func_content=$(declare -f "$cmd")
         _h_highlight_script "$func_content" "$indent"
+        
         printf "\n%s    ─── End of function '%s' ───\n" "$indent" "$cmd"    
         return 0
     fi
@@ -261,14 +298,14 @@ h() {
         __H_SEEN_ALIASES["$cmd"]=1
     
         # Get the alias expansion (strip surrounding quotes)
-        local raw=$(alias "$cmd")
+        local raw
+        raw=$(alias "$cmd")
         alias_expansion=${raw#*=}         # remove 'name='
         alias_expansion=${alias_expansion:1:${#alias_expansion}-2}   # trim outer quotes
-
         # Expand environment vars safely (no command execution)
         alias_expansion=$(_h_expand_vars "$alias_expansion")
-  
         alias_def=$(alias "$cmd")
+        
         printf "%s├─ ${CYAN}'%s' ${RESET}is an alias → resolves to: ${CYAN}%s${RESET}\n" "$indent" "$cmd" "$alias_def"
     
         # Show where alias is defined
@@ -276,12 +313,17 @@ h() {
         local line_number
         
         _h_sourcedtree
-        
+
         #----------------------------
         # Enable nullglob temporarily 
         local nullglob_was=0
-        shopt -q nullglob && nullglob_was=1 || shopt -s nullglob      
-        for file in ${SOURCED_FILES_LIST[@]}; do 
+        if shopt -q nullglob; then
+            nullglob_was=1
+        else
+            shopt -s nullglob
+        fi
+  
+        for file in "${SOURCED_FILES_LIST[@]}"; do 
              [[ -r "$file" ]] || continue
              if grep -qE "^[[:space:]]*alias[[:space:]]+${cmd}=" "$file"; then
                 found_location="$file"
@@ -306,9 +348,10 @@ h() {
             printf "%s${RED}Command not found: '%s'${RESET}\n" "$indent" "$cmd"
             return 1
         }
-        local cmd_real formatted_type             
+        local cmd_real             
         cmd_real=$(readlink -f "$cmd_path" 2>/dev/null || echo "$cmd_path")
-        local file_info=$(file -b "$cmd_real")
+        local file_info
+        file_info=$(file -b "$cmd_real")
         
         printf "%s├─ ${CYAN}'%s' ${RESET}is an external command\n" "$indent" "$cmd"
         printf "%s    ↳ Path: ${CYAN}%s${RESET}\n" "$indent" "$cmd_path"    
@@ -374,7 +417,6 @@ h() {
         fi
         return 0
     fi
-   
 }
  
 #------------------------------------------------------------------------
@@ -413,7 +455,7 @@ EOF
 _h_ver() {
     cat <<'EOF'
 
-     h v3.0.9 — Bash help tool
+     h v3.0.12 — Bash help tool
      Author : John Blair
      Updated: 2025-11-10  
           
@@ -511,7 +553,6 @@ _h_completion() {
    
     # Collect possible completions: aliases, functions, builtins, and executables in PATH
     mapfile -t commands < <(compgen -A function -A alias -A builtin -A command -- "$cur")
-
     # Provide them to bash-completion
     COMPREPLY=("${commands[@]}")
 }
@@ -536,7 +577,6 @@ _h_expand_vars() {
 # Function: _h_sourcedtree
 # Purpose: Recursively scan .bashrc for ALL files that are sourced. including conditionals.
 #------------------------------------------------------------------------
-# Global array to track all sourced files
 declare -gA SOURCED_FILES_MAP=()   # associative array to avoid duplicates
 declare -ga SOURCED_FILES_LIST=()  # optional list preserving order
 
@@ -546,8 +586,7 @@ _h_sourcedtree() {
     local file files depth max_depth
     depth=0
     max_depth="${MAX_DEPTH:-5}"
-    
-    files=($BASH_ENV) 
+    files=("$BASH_ENV")
 
 if shopt -q login_shell; then
     [[ -d /etc/profile.d ]] && files+=( /etc/profile.d/*.sh )
@@ -642,8 +681,11 @@ _h_highlight_script() {
         code="$input"
     fi
     
-    if command -v batcat &>/dev/null && [[ -f "$input" ]]; then
-        batcat --color=always --paging=never "$input" | sed "s/^/$indent/"
+    [[ $(which "bat") ]] && bat_pager="bat"
+    [[ $(which "batcat") ]] && bat_pager="batcat"
+ 
+    if command -v "$bat_pager" &>/dev/null && [[ -f "$input" ]]; then
+        $bat_pager --color=always --paging=never "$input" | sed "s/^/$indent/"
         return
     fi
 
@@ -704,17 +746,13 @@ PERL_CODE
 # Purpose : Check core and optional dependencies, warn user, optionally exit on missing core deps
 # Usage   : _h_check_dependencies needed_deps optional_deps [EXIT_ON_MISSING] 0or1
 #------------------------------------------------------------------------
-
-needed_deps=(grep basename file find sed cut head readlink realpath)
-optional_deps=(tput perl fzf man info)
-
 _h_check_dependencies() {
     local -n required="$1"    # Required dependencies (pass by name)
     local -n optional="$2"    # Optional dependencies (pass by name)
     local exit_on_missing="${3:-1}"  # Default: exit if required deps missing
 
     local missing_required=()
-    local missing_optional=()
+   # local missing_optional=()
 
     # Check required dependencies
     for cmd in "${required[@]}"; do

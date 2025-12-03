@@ -1,4 +1,7 @@
-V33.0.10
+V3.0.12
+     code cleanup. -- passed shellcheck
+
+V3.0.10
      code cleanup. ui bug fixes.
      added support for batcat highlighting
 

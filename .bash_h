@@ -12,9 +12,9 @@ case $- in
 esac
 
 # shellcheck disable=SC2034
-ca_needed_deps=(grep basename file find sed cut head readlink realpath dpkg awk ldd getcap perl)
+h_needed_deps=(grep basename file find sed cut head readlink realpath dpkg awk ldd getcap perl)
 # shellcheck disable=SC2034
-ca_optional_deps=(tput fzf batcat bat)
+h_optional_deps=(tput fzf batcat)
 
 MAX_DEPTH=4
 OLD_PATH="$PATH"
@@ -76,10 +76,7 @@ h() {
     if (( depth == 0 )); then
         trap '_h_restore_path' RETURN
         _h_add_admin_paths
-        # -------------------------
-        # Check dependencies
-        _h_check_dependencies ca_needed_deps ca_optional_deps 1  # 1 = exit if required deps missing
-
+        
         #--------------------------
         # Reset arrays on first run
         #--------------------------
@@ -95,6 +92,10 @@ h() {
         printf "\n╔══════════════════════════════════════════════╗\n"
         printf "║   h – Bash Help Tool                         ║\n"
         printf "╚══════════════════════════════════════════════╝\n"
+        
+        # -------------------------
+        # Check dependencies
+        _h_check_dependencies h_needed_deps h_optional_deps 1  || return 1 # 1 = exit if required deps missing
     fi 
         
     # -------------------------
@@ -328,6 +329,7 @@ h() {
              if grep -qE "^[[:space:]]*alias[[:space:]]+${cmd}=" "$file"; then
                 found_location="$file"
                 line_number=$(grep -nE "^[[:space:]]*alias[[:space:]]+$cmd=" "$file" | head -n1 | cut -d: -f1)
+                
                 printf "%s    ↳ Defined in: ${CYAN}%s (line %s)${RESET}\n" "$indent" "$file" "$line_number"
              fi
         done
@@ -335,7 +337,7 @@ h() {
         #----------------------------
         
         if [[ -z "$found_location" ]]; then
-            printf "%s    ↳ Defined manually in shell, or a custom location.\n" "$indent"
+            printf "%s    ↳ Declared in: ${CYAN}interactive shell (not from a file)${RESET}\n" "$indent"
         fi     
         return 0      
     fi
@@ -455,7 +457,7 @@ EOF
 _h_ver() {
     cat <<'EOF'
 
-     h v3.0.12 — Bash help tool
+     h v3.0.13 — Bash help tool
      Author : John Blair
      Updated: 2025-11-10  
           
@@ -681,13 +683,29 @@ _h_highlight_script() {
         code="$input"
     fi
     
-    [[ $(which "bat") ]] && bat_pager="bat"
-    [[ $(which "batcat") ]] && bat_pager="batcat"
- 
-    if command -v "$bat_pager" &>/dev/null && [[ -f "$input" ]]; then
-        $bat_pager --color=always --paging=never "$input" | sed "s/^/$indent/"
-        return
+#----------------------------------------
+# Choose bat or batcat, if available
+local bat_pager=""
+if command -v bat &>/dev/null; then
+    bat_pager="bat"
+elif command -v batcat &>/dev/null; then
+    bat_pager="batcat"
+fi
+
+#----------------------------------------
+# If bat is available, use it
+if [[ -n "$bat_pager" ]]; then
+    if [[ -f "$input" ]]; then
+        "$bat_pager" --color=always --paging=never --line-range :50 "$input" \
+        | sed "s/^/$indent/"
+    else
+        # Input is literal text → use process substitution
+        printf "%s" "$code" \
+        | "$bat_pager" --color=always --language bash --paging=never --line-range :50 - \
+        | sed "s/^/$indent/"
     fi
+    return
+fi
 
     perl - "$code" "$indent" <<'PERL_CODE'
 use strict;
@@ -747,28 +765,34 @@ PERL_CODE
 # Usage   : _h_check_dependencies needed_deps optional_deps [EXIT_ON_MISSING] 0or1
 #------------------------------------------------------------------------
 _h_check_dependencies() {
-    local -n required="$1"    # Required dependencies (pass by name)
-    local -n optional="$2"    # Optional dependencies (pass by name)
-    local exit_on_missing="${3:-1}"  # Default: exit if required deps missing
+    local -n required="$1"
+    local -n optional="$2"
+    local exit_on_missing="${3:-1}"
 
     local missing_required=()
-   # local missing_optional=()
+    local missing_optional=()
 
-    # Check required dependencies
     for cmd in "${required[@]}"; do
         command -v "$cmd" >/dev/null 2>&1 || missing_required+=("$cmd")
     done
 
-    # Check optional dependencies
     for cmd in "${optional[@]}"; do
-        command -v "$cmd" >/dev/null 2>&1 
+        command -v "$cmd" >/dev/null 2>&1 || missing_optional+=("$cmd")
     done
 
-    # Report missing required deps
     if (( ${#missing_required[@]} )); then
-        printf "${RED}Warning: Missing REQUIRED tools: %s${RESET}\n" "${missing_required[*]}"
-        (( exit_on_missing )) && { printf "Exiting due to missing core dependencies.\n"; exit 1; }
+        printf "%b\n" "${RED}Warning: Missing REQUIRED tools: ${missing_required[*]}${RESET}"
+        if (( exit_on_missing )); then
+            printf "%b\n" "${RED}Cannot continue analysis without core dependencies.${RESET}"
+            if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+                exit 1
+            else
+                return 1
+            fi
+        fi
     fi
+
+    return 0
 }
 
 #------------------------------------------------------------------------

@@ -3,50 +3,18 @@
 [![MIT License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Version](https://img.shields.io/badge/version-3.0.20-blue)](https://github.com/JB63134/bash_h/releases)
 
-**hh** is a full fledged command resolution engine that unifies help into one shortcut - **h** It helps you understand what a command is, and shows available documentation.
+**hh** is a full fledged command resolution engine that unifies help into one shortcut - **h**    It helps you understand what a command is, and shows available documentation.
 
+I decided to write this version of **h** so that I could get help from multiple sources.  
+For binaries '<command> --help', -help, -h, or -?.  
+For builtins and some keywords use 'help "command"'  
+As a fallback, checks for both man pages and info pages then alerts the user if found.
+For aliases, functions and scripts - handle displaying contents.  
 
+## Requires: 
 
---------------------------------------------------------------------------------------------
-
-History:  
-
-V1.0.0 was a small alias: alias h='eval "$(history -p \!\! | awk '\''{print $1}'\'')" --help'
-
-V2.0.0 was a small function using fc similar to this:
-
-      h() {
-          last_cmd=$(fc -ln -1 | awk '{print $1}')
-          # Run the last command with --help appended
-          eval "$last_cmd --help"
-      }
-     
-V3.0.0
-      I decided to rewrite h so that i could get help from multiple sources.  
-      Using common flags like '<command> --help', -help, -h, or -?.  
-      For builtins and some keywords use 'help "command"'  
-      As a fallback, checks for both man pages and info pages then alerts the user if found.
-      For aliases, functions and scripts - handle displaying contents.  
-
-
-------------------------------------------------------------------------------------------------------------------
-
-
-
-# h — A Bash Help Tool
-======================
-
-**h** is a shell-helper tool that provides help/documentation lookup for shell commands.
-
----  
-[![asciicast](https://asciinema.org/a/CUJEg6Nfm40MTj61WAjnv2LWR.svg)](https://asciinema.org/a/CUJEg6Nfm40MTj61WAjnv2LWR)    
-
-[![asciicast](https://asciinema.org/a/4SGLMx1Sss5OJHexvlPpTT6WE.svg)](https://asciinema.org/a/4SGLMx1Sss5OJHexvlPpTT6WE)
-  
----
-
-Requires: Bash ≥ V4.4 and GNU utils    
-Sourced file detection: supports debian and fedora / rhel setups  
+Bash ≥ V4.4 and GNU utils    
+Sourced file detection supports debian and fedora / rhel setups 
 
 ## Features
 
@@ -113,6 +81,23 @@ If no command is provided, `h` will analyze your **most recent command**.
 ![SUID](images/suid.png)
 ![Scan mode](images/scanmode.png)
 
----
+--------------------------------------------------------------------------------------------
+History: 
 
+V1.0.0 was a small alias: alias h='eval "$(history -p \!\! | awk '\''{print $1}'\'')" --help'
 
+V2.0.0 was a small function using fc similar to this:
+
+      h() {
+          last_cmd=$(fc -ln -1 | awk '{print $1}')
+          # Run the last command with --help appended
+          eval "$last_cmd --help"
+      }
+     
+V3.0.0
+      I decided to rewrite h so that i could get help from multiple sources.  
+      Using common flags like '<command> --help', -help, -h, or -?.  
+      For builtins and some keywords use 'help "command"'  
+      As a fallback, checks for both man pages and info pages then alerts the user if found.
+      For aliases, functions and scripts - handle displaying contents.  
+------------------------------------------------------------------------------------------------------------------

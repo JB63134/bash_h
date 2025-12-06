@@ -100,4 +100,5 @@ V3.0.0
       For builtins and some keywords use 'help "command"'  
       As a fallback, checks for both man pages and info pages then alerts the user if found.
       For aliases, functions and scripts - handle displaying contents.  
+      
 ------------------------------------------------------------------------------------------------------------------

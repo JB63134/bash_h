@@ -12,7 +12,7 @@ For builtins and some keywords use 'help "command"'
 As a fallback, checks for both man pages and info pages then alerts the user if found        
 For aliases, functions and scripts - handle displaying contents.  
 
-## Requires: 
+## Requires 
 
 Bash ≥ V4.4 and GNU utils    
 Sourced file detection supports debian and fedora / rhel setups 

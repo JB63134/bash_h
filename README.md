@@ -174,3 +174,84 @@ V3.0.0
 
 
 ------------------------------------------------------------------------------------------------------------------
+
+
+
+# h — A Bash Help Tool
+======================
+
+**h** is a shell-helper tool that provides help/documentation lookup for shell commands.
+
+Requires: Bash ≥ V4.4 and GNU utils    
+Sourced file detection: supports debian and fedora / rhel setups  
+
+---
+
+## Features
+
+* **Syntax-highlighting**:
+  
+  * 50 line preview of scripts and functions
+* **aliases and functions**:
+
+  * show alias definition or function body
+  * location (file and line number, or interactive shell)
+* **builtins and Keywords**:
+
+  * Display help output - 'help <command>'
+  * Internal Descriptions for Edge cases missing help output  
+* Inspect **external binaries**:
+
+  * Displays the full resolved path and alerts you of symlinks
+  * Display help output by iterating through common flags
+  * Tries --help -help -h and -?
+* **Interactive search**: using `fzf` for commands (optional)
+* Pretty-printed, colorized output (uses `tput` or ANSI colors)
+
+---
+
+## Installation
+
+Clone the repository and source the script in your `.bashrc` or `.bash_profile`:
+
+```bash
+git clone https://github.com/JB63134/bash_h.git
+source /path/to/ca/.bash_h
+```
+
+---
+
+## Usage
+
+```bash
+h [command]
+```
+
+If no command is provided, `h` will analyze your **most recent command**.
+
+### Options
+
+| Option               | Description                                                        |
+| -------------------- | ------------------------------------------------------------------ |
+| `-h`, `--help`       | Show help text                                                     |
+| `-v`, `--version`    | Show version information                                           |
+| `-f`, `--fzf`        | Interactively search for commands (requires `fzf`)                 |
+
+
+---
+
+## Screenshots / Output Preview
+
+![Source and $Path modes](images/source-path.png)
+![Overridden commands](images/override.png)
+![Builtins and Keywords](images/builtin-keyword.png)
+![binry](images/awk.png)
+![Script](images/script.png)
+![World-Writable file](images/world-writable.png)
+![SGID](images/sgid.png)
+![SUID](images/suid.png)
+![Scan mode](images/scanmode.png)
+
+---
+
+

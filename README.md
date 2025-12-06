@@ -28,7 +28,7 @@ Sourced file detection supports debian and fedora / rhel setups
   * location (file and line number, or interactive shell)
 * **builtins and Keywords**:
 
-  * Display help output - 'help <command>'
+  * Display help output - 'help 'command''
   * Internal Descriptions for Edge cases missing help output  
 * Inspect **external binaries**:
 

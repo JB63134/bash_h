@@ -146,11 +146,9 @@ Compatability table:
 | Arch / Manjaro        | ✅      | Fully supported                           |
 | Gentoo                | ✅      | Fully supported                           |
 | openSUSE              | ✅      | Fully supported                           |
-| macOS                 | ⚠️     | Needs GNU utilities installed             |
-| FreeBSD / OpenBSD     | ⚠️     | Needs Bash + GNU utils                    |
-| Alpine                | ❌      | Unless user installs bash + GNU coreutils |
-| BusyBox environments  | ❌      | Too limited                               |
-| Dash, ksh, zsh        | ❌      | Script is bash-only                       |
+| macOS                 | ⚠️     | Needs BASH >= 4.4 + GNU utils              |
+| FreeBSD / OpenBSD     | ⚠️     | Needs BASH >= 4.4 + GNU utils              |
+
 
 
 --------------------------------------------------------------------------------------------

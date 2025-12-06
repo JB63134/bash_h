@@ -8,8 +8,7 @@
 I decided to write this version of **h** so that I could get help from multiple sources.  
 For binaries '<command> --help', -help, -h, or -?.  
 For builtins and some keywords use 'help "command"'  
-As a fallback, checks for both man pages and info pages then alerts the user if found.
-  For aliases, functions and scripts - handle displaying contents.  
+As a fallback, checks for both man pages and info pages then alerts the user if found  For aliases, functions and scripts - handle displaying contents.  
 
 ## Requires: 
 

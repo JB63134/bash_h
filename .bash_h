@@ -12,7 +12,7 @@ case $- in
 esac
 
 # shellcheck disable=SC2034
-h_needed_deps=(grep basename file find sed cut head readlink realpath awk perl)
+h_needed_deps=(grep basename file find sed cut head readlink realpath perl)
 # shellcheck disable=SC2034
 h_optional_deps=(tput fzf batcat bat)
 
@@ -431,8 +431,8 @@ _h_usage() {
     cat <<'EOF'
 
      Usage:  h [command]  
-     Analyzes a Bash cli command, alias, builtin, function, or binary — showing where it’s 
-     defined, how it expands, and what help or documentation is available.
+     Analyzes a Bash cli command, aliases, builtins, keywords, functions, scripts or binaries. 
+     Showing where it’s defined, how it expands, and what help or documentation is available.
 
      Options:
            -h --help or h      Show this help text.
@@ -459,7 +459,7 @@ EOF
 _h_ver() {
     cat <<'EOF'
 
-     h v3.0.20 — Bash help tool
+     h v3.0.21 — Bash help tool
      Author : John Blair
           
      MIT License
@@ -702,7 +702,7 @@ __H_SOURCED_FILES_LIST+=("$expanded")
         if [[ $line =~ source[[:space:]]+\"\$\{([a-zA-Z_][a-zA-Z0-9_]*)\[@\]\}\" ]]; then
             local arr_name="${BASH_REMATCH[1]}"
             local elems
-            IFS=$'\n' read -r -d '' -a elems < <(eval "printf '%s\n' \"\${$arr_name[@]}\"")
+            IFS=$'\n' read -r -d '' -a elems < <(eval "printf '%s\n' \"\${${arr_name}[@]}\"")
             for f in "${elems[@]}"; do
                 f=$(_h_expand_path "$f")
                 [[ -f "$f" ]] && _h_sourcedtree_single "$f" $((depth + 1)) "$max_depth"
@@ -711,7 +711,6 @@ __H_SOURCED_FILES_LIST+=("$expanded")
 
     done < "$expanded"
 }
-
 
     #-----------------------------------------------------------
     # Helper: _h_expand_path
@@ -782,7 +781,6 @@ elif command -v batcat &>/dev/null; then
     bat_pager="batcat"
 fi
 
-#----------------------------------------
 # If bat is available, use it
 if [[ -n "$bat_pager" ]]; then
     if [[ -f "$input" ]]; then
@@ -796,7 +794,8 @@ if [[ -n "$bat_pager" ]]; then
     fi
     return
 fi
-
+#----------------------------------------
+ 
     perl - "$code" "$indent" <<'PERL_CODE'
 use strict;
 use warnings;

@@ -1,5 +1,7 @@
-V3.0.17
+V3.0.20
      Major overhaul of sourced file detection to handle more nested sourced files, conditional sourcing, etc.
+     also follows bash internal logic for startup files now.
+     detects rhel fedora and adds profile.d/*sh for interactive non login shells
 
 V3.0.14
      Fixed a bug in dependency check

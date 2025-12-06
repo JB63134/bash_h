@@ -17,6 +17,8 @@
 * Integrates with **fzf** for interactive command search.
 * Automatic detection of commonly used **admin paths**.
 
+---  
+[![asciicast](https://asciinema.org/a/CUJEg6Nfm40MTj61WAjnv2LWR.svg)](https://asciinema.org/a/CUJEg6Nfm40MTj61WAjnv2LWR)  
 ---
 ## Usage
 

@@ -71,15 +71,11 @@ If no command is provided, `h` will analyze your **most recent command**.
 
 ## Screenshots / Output Preview
 
-![Source and $Path modes](images/source-path.png)
-![Overridden commands](images/override.png)
+![Aliases](images/alias.png)
+![Functions](images/function.png)
 ![Builtins and Keywords](images/builtin-keyword.png)
 ![binry](images/awk.png)
 ![Script](images/script.png)
-![World-Writable file](images/world-writable.png)
-![SGID](images/sgid.png)
-![SUID](images/suid.png)
-![Scan mode](images/scanmode.png)
 
 --------------------------------------------------------------------------------------------
 History: 

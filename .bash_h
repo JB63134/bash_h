@@ -457,7 +457,7 @@ EOF
 _h_ver() {
     cat <<'EOF'
 
-     h v3.0.17 — Bash help tool
+     h v3.0.18 — Bash help tool
      Author : John Blair
           
      MIT License
@@ -598,6 +598,27 @@ else
     [[ -f ~/.bashrc && -r ~/.bashrc ]] && files+=( ~/.bashrc )
     [[ -f /etc/bash.bashrc && -r /etc/bash.bashrc ]] && files+=( /etc/bash.bashrc )
 fi
+
+if [ -f /etc/os-release ]; then
+    while IFS='=' read -r key value; do
+        # Remove surrounding quotes if present
+        value="${value%\"}"
+        value="${value#\"}"
+        case "$key" in
+            ID)
+                [[ "$value" == "fedora" || "$value" == "rhel" ]] && is_rhel_like=1
+                ;;
+            ID_LIKE)
+                [[ "$value" == *"rhel"* ]] && is_rhel_like=1
+                ;;
+        esac
+    done < /etc/os-release
+
+    if [[ -n "$is_rhel_like" ]]; then
+        # This system is Fedora/RHEL-like
+        files+=( /etc/profile.d/*.sh )
+    fi
+fi
     
     for file in "${files[@]}"; do
         _h_sourcedtree_single "$file" "$depth" "$max_depth"
@@ -632,7 +653,7 @@ SOURCED_FILES_LIST+=("$expanded")
         # Skip comments and empty lines
         [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
 
-        # 1️⃣ Standard source/dot
+        #   Standard source/dot
         if [[ $line =~ ^[[:space:]]*(source|\.)[[:space:]]+(.+) ]]; then
             for f in ${BASH_REMATCH[2]}; do
                 f=$(_h_expand_path "$f")
@@ -641,7 +662,7 @@ SOURCED_FILES_LIST+=("$expanded")
             continue
         fi
 
-        # 2️⃣ Conditional: [[ -f FILE ]] && source FILE
+        #  Conditional: [[ -f FILE ]] && source FILE
         if [[ $line == *"&&"* ]]; then
             left=${line%%&&*}
             right=${line#*&&}
@@ -659,7 +680,7 @@ SOURCED_FILES_LIST+=("$expanded")
             continue
         fi
 
-        # 3️⃣ For loops: for VAR in FILES; do source $VAR; done
+        #   For loops: for VAR in FILES; do source $VAR; done
         if [[ $line =~ ^[[:space:]]*for[[:space:]]+[a-zA-Z_][a-zA-Z0-9_]*[[:space:]]+in[[:space:]]+(.+) ]]; then
             for f in ${BASH_REMATCH[1]}; do
                 f=$(_h_expand_path "$f")
@@ -668,7 +689,7 @@ SOURCED_FILES_LIST+=("$expanded")
             continue
         fi
 
-        # 4️⃣ Array sourcing: source "${ARRAY[@]}"
+        #  Array sourcing: source "${ARRAY[@]}"
         if [[ $line =~ source[[:space:]]+\"\$\{([a-zA-Z_][a-zA-Z0-9_]*)\[@\]\}\" ]]; then
             local arr_name="${BASH_REMATCH[1]}"
             local elems

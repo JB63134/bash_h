@@ -1,3 +1,6 @@
+V3.0.17
+     Major overhaul of sourced file detection to handle more nested sourced files, conditional sourcing, etc.
+
 V3.0.14
      Fixed a bug in dependency check
 

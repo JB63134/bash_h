@@ -18,7 +18,11 @@
 * Automatic detection of commonly used **admin paths**.
 
 ---  
-[![asciicast](https://asciinema.org/a/CUJEg6Nfm40MTj61WAjnv2LWR.svg)](https://asciinema.org/a/CUJEg6Nfm40MTj61WAjnv2LWR)  
+[![asciicast](https://asciinema.org/a/CUJEg6Nfm40MTj61WAjnv2LWR.svg)](https://asciinema.org/a/CUJEg6Nfm40MTj61WAjnv2LWR)    
+
+[![asciicast](https://asciinema.org/a/4SGLMx1Sss5OJHexvlPpTT6WE.svg)](https://asciinema.org/a/4SGLMx1Sss5OJHexvlPpTT6WE)
+
+  
 ---
 ## Usage
 

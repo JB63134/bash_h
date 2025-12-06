@@ -12,9 +12,9 @@ case $- in
 esac
 
 # shellcheck disable=SC2034
-h_needed_deps=(grep basename file find sed cut head readlink realpath dpkg awk ldd getcap perl)
+h_needed_deps=(grep basename file find sed cut head readlink realpath awk perl)
 # shellcheck disable=SC2034
-h_optional_deps=(tput fzf batcat)
+h_optional_deps=(tput fzf batcat bat)
 
 MAX_DEPTH=4
 OLD_PATH="$PATH"

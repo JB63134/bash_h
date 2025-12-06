@@ -280,13 +280,13 @@ h() {
             printf "%s    ↳ Declared in: ${CYAN}%s (line %s)${RESET}\n" "$indent" "$file" "$line"
         fi
         
-        printf "%s    ↳ Showing function: ${CYAN}%s${RESET}\n\n"  "$indent" "$cmd"     
+        printf "%s    ↳ Showing first 50 lines of function: ${CYAN}%s${RESET}\n\n"  "$indent" "$cmd"     
            
         local func_content
         func_content=$(declare -f "$cmd")
-        _h_highlight_script "$func_content" "$indent"
+        _h_highlight_script "$func_content" "$indent" "$file" "$line"
         
-        printf "\n%s    ─── End of function '%s' ───\n" "$indent" "$cmd"    
+        printf "\n%s    ======= End of function preview =======\n" "$indent"   
         return 0
     fi
     
@@ -370,14 +370,14 @@ h() {
         
         # Show script contents if text executable
         if [[ "$file_info" == *"script"* || "$file_info" == *"text executable"* ]]; then
-            printf "%s    ↳ Showing script ${CYAN}'%s'${RESET}:\n" "$indent" "$cmd"
+            printf "%s    ↳ Showing first 50 lines of script ${CYAN}'%s'${RESET}:\n" "$indent" "$cmd"
             if (( perlfound == 0 )); then 
                 printf "%s    ↳ ${YELLOW}Optional dependency 'perl' missing — syntax highlighting reduced${RESET}\n" "$indent" 
             fi
             if [[ -r "$cmd_path" ]]; then
                 printf "\n"
-                _h_highlight_script "$cmd_path" "$indent" 
-                printf "\n\n%s    ─── End of script '%s' ───\n" "$indent" "$cmd"
+                _h_highlight_script "$cmd_path" "$indent" " " " "
+                printf "\n%s    ========== End of script preview ========= \n" "$indent"
             fi
             return 0
         fi
@@ -457,9 +457,8 @@ EOF
 _h_ver() {
     cat <<'EOF'
 
-     h v3.0.13 — Bash help tool
+     h v3.0.17 — Bash help tool
      Author : John Blair
-     Updated: 2025-11-10  
           
      MIT License
 
@@ -608,44 +607,88 @@ fi
     #-----------------------------------------------------------
     # Internal recursive function
 _h_sourcedtree_single() {
-    local file="${1:-$HOME/.bashrc}"
+    local file="$1"
     local depth="${2:-0}"
     local max_depth="${3:-5}"
-    local indent="" i expanded src
-
     (( depth > max_depth )) && return
 
-    for ((i = 0; i < depth; i++)); do indent+="  "; done
+# Expand path
+local expanded
+expanded=$(_h_expand_path "$file")
+expanded="${expanded%%$'\n'}"   # strip newlines
+expanded="${expanded// /}"      # optional: remove spaces if needed
 
-    expanded=$(_h_expand_path "$file")
+# Skip empty, duplicates, or unreadable files
+[[ -z "$expanded" ]] && return
+[[ -n ${SOURCED_FILES_MAP["$expanded"]} ]] && return
+[[ ! -f "$expanded" || ! -r "$expanded" ]] && return
 
-    # Skip duplicates
-    [[ -n ${SOURCED_FILES_MAP["$expanded"]} ]] && return
+SOURCED_FILES_MAP["$expanded"]=1
+SOURCED_FILES_LIST+=("$expanded")
 
-    # count “garbage” paths
-    if [[ ! -f "$expanded" || "$expanded" =~ [\$\*\?\[\]] ]]; then
-        return
-    fi
-    
-    SOURCED_FILES_MAP["$expanded"]=1
-    SOURCED_FILES_LIST+=("$expanded")
+    local line f left right
 
-    # Extract sourced files
-    while IFS= read -r src; do
-        [[ $src =~ ^[[:space:]]*# ]] && continue
-        [[ $src =~ (^|[[:space:]])(source|\.)[[:space:]]+([^#;]+) ]] || continue
-        src="${BASH_REMATCH[3]}"
-        src=$(_h_expand_path "$src")
-        _h_sourcedtree_single "$src" $((depth + 1)) "$max_depth"
-    done < <(grep -E '^\s*(\.|source)\s+' "$expanded" 2>/dev/null)
+    while IFS= read -r line; do
+        # Skip comments and empty lines
+        [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
+
+        # 1️⃣ Standard source/dot
+        if [[ $line =~ ^[[:space:]]*(source|\.)[[:space:]]+(.+) ]]; then
+            for f in ${BASH_REMATCH[2]}; do
+                f=$(_h_expand_path "$f")
+                [[ -f "$f" ]] && _h_sourcedtree_single "$f" $((depth + 1)) "$max_depth"
+            done
+            continue
+        fi
+
+        # 2️⃣ Conditional: [[ -f FILE ]] && source FILE
+        if [[ $line == *"&&"* ]]; then
+            left=${line%%&&*}
+            right=${line#*&&}
+            # Remove leading/trailing spaces
+            left=${left##*( )}
+            left=${left%%*( )}
+            right=${right##*( )}
+            right=${right%%*( )}
+
+            # Check if left is [[ -f FILE ]] and right is source FILE
+            if [[ $left =~ \[\[[[:space:]]*-f[[:space:]]+([^]]+)\]\] ]] && [[ $right =~ ^source[[:space:]]+(.+) ]]; then
+                f=$(_h_expand_path "${BASH_REMATCH[1]}")
+                [[ -f "$f" ]] && _h_sourcedtree_single "$f" $((depth + 1)) "$max_depth"
+            fi
+            continue
+        fi
+
+        # 3️⃣ For loops: for VAR in FILES; do source $VAR; done
+        if [[ $line =~ ^[[:space:]]*for[[:space:]]+[a-zA-Z_][a-zA-Z0-9_]*[[:space:]]+in[[:space:]]+(.+) ]]; then
+            for f in ${BASH_REMATCH[1]}; do
+                f=$(_h_expand_path "$f")
+                [[ -f "$f" ]] && _h_sourcedtree_single "$f" $((depth + 1)) "$max_depth"
+            done
+            continue
+        fi
+
+        # 4️⃣ Array sourcing: source "${ARRAY[@]}"
+        if [[ $line =~ source[[:space:]]+\"\$\{([a-zA-Z_][a-zA-Z0-9_]*)\[@\]\}\" ]]; then
+            local arr_name="${BASH_REMATCH[1]}"
+            local elems
+            IFS=$'\n' read -r -d '' -a elems < <(eval "printf '%s\n' \"\${$arr_name[@]}\"")
+            for f in "${elems[@]}"; do
+                f=$(_h_expand_path "$f")
+                [[ -f "$f" ]] && _h_sourcedtree_single "$f" $((depth + 1)) "$max_depth"
+            done
+        fi
+
+    done < "$expanded"
 }
+
 
     #-----------------------------------------------------------
     # Helper: _h_expand_path
 _h_expand_path() {
     local p="$1"
 
-    # Strip quotes and whitespace
+    # Strip quotes, semicolons, leading/trailing spaces
     p="${p//\"/}"
     p="${p//\'/}"
     p="${p//;/}"
@@ -664,7 +707,10 @@ _h_expand_path() {
         p=$(realpath "$p" 2>/dev/null || echo "$p")
     fi
 
-    printf '%s\n' "$p"
+    # Remove newlines and trailing spaces
+    p="${p//$'\n'/}"
+    p="${p%%*( )}"
+    printf '%s' "$p"
 }
 
 #------------------------------------------------------------------------
@@ -674,7 +720,21 @@ _h_expand_path() {
 _h_highlight_script() {
     local input="$1"
     local indent="    "
-
+    local file="$3"
+    local line="$4"
+   
+    # Construct header for literal text or file
+    local header=""
+    if [[ -n "$file" && -n "$line" ]]; then
+        if [[ "$file" == "main" ]]; then
+            header="Interactive shell (not from a file)"
+        else    
+        header="$file (line $line)"
+        fi
+    elif [[ -f "$input" ]]; then
+        header="$input"
+    fi
+    
     # Read file if it exists
     local code
     if [[ -f "$input" ]]; then
@@ -696,12 +756,12 @@ fi
 # If bat is available, use it
 if [[ -n "$bat_pager" ]]; then
     if [[ -f "$input" ]]; then
-        "$bat_pager" --color=always --paging=never --line-range :50 "$input" \
+        "$bat_pager" --color=always --paging=never --line-range :50 --file-name "$input" "$input" \
         | sed "s/^/$indent/"
     else
         # Input is literal text → use process substitution
         printf "%s" "$code" \
-        | "$bat_pager" --color=always --language bash --paging=never --line-range :50 - \
+        | "$bat_pager" --color=always --language bash --paging=never --line-range :50 --file-name "$header" - \
         | sed "s/^/$indent/"
     fi
     return

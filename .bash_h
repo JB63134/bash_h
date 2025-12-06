@@ -19,6 +19,8 @@ h_optional_deps=(tput fzf batcat bat)
 MAX_DEPTH=4
 OLD_PATH="$PATH"
 
+declare -gA __H_SOURCED_FILES_MAP=()   
+declare -ga __H_SOURCED_FILES_LIST=() 
 declare -gA __H_SEEN_ALIASES
 declare -gA __H_SEEN_COMMANDS
 declare -gA __H_SEEN_BUILTINS
@@ -324,7 +326,7 @@ h() {
             shopt -s nullglob
         fi
   
-        for file in "${SOURCED_FILES_LIST[@]}"; do 
+        for file in "${__H_SOURCED_FILES_LIST[@]}"; do 
              [[ -r "$file" ]] || continue
              if grep -qE "^[[:space:]]*alias[[:space:]]+${cmd}=" "$file"; then
                 found_location="$file"
@@ -457,7 +459,7 @@ EOF
 _h_ver() {
     cat <<'EOF'
 
-     h v3.0.18 — Bash help tool
+     h v3.0.20 — Bash help tool
      Author : John Blair
           
      MIT License
@@ -578,12 +580,9 @@ _h_expand_vars() {
 # Function: _h_sourcedtree
 # Purpose: Recursively scan .bashrc for ALL files that are sourced. including conditionals.
 #------------------------------------------------------------------------
-declare -gA SOURCED_FILES_MAP=()   # associative array to avoid duplicates
-declare -ga SOURCED_FILES_LIST=()  # optional list preserving order
-
 _h_sourcedtree() {
-    SOURCED_FILES_MAP=()
-    SOURCED_FILES_LIST=()
+    __H_SOURCED_FILES_MAP=()
+    __H_SOURCED_FILES_LIST=()
     local file files depth max_depth
     depth=0
     max_depth="${MAX_DEPTH:-5}"
@@ -592,34 +591,44 @@ _h_sourcedtree() {
 if shopt -q login_shell; then
     [[ -d /etc/profile.d ]] && files+=( /etc/profile.d/*.sh )
     [[ -f /etc/profile && -r /etc/profile ]] && files+=( /etc/profile )
+        if [[ -f ~/.bash_profile && -r ~/.bash_profile ]]; then 
+            files+=( ~/.bash_profile )
+        elif [[ -f ~/.bash_login && -r ~/.bash_login ]]; then 
+            files+=( ~/.bash_login )
+        elif [[ -f ~/.profile && -r ~/.profile ]]; then 
+            files+=( ~/.profile )
+        fi
 else
     # Non-login interactive shell
     [[ -d /etc/bash.bashrc.d ]] && files+=( /etc/bash.bashrc.d/*.sh )
     [[ -f ~/.bashrc && -r ~/.bashrc ]] && files+=( ~/.bashrc )
     [[ -f /etc/bash.bashrc && -r /etc/bash.bashrc ]] && files+=( /etc/bash.bashrc )
-fi
+    [[ -f /etc/bashrc && -r /etc/bashrc ]] && files+=( /etc/bashrc )
+   
+    if [ -f /etc/os-release ]; then
+        while IFS='=' read -r key value; do
+            # Remove surrounding quotes if present
+            value="${value%\"}"
+            value="${value#\"}"
+            case "$key" in
+                ID)
+                    [[ "$value" == "fedora" || "$value" == "rhel" ]] && is_rhel_like=1
+                    ;;
+                ID_LIKE)
+                    [[ "$value" == *"rhel"* ]] && is_rhel_like=1
+                    ;;
+            esac
+        done < /etc/os-release
 
-if [ -f /etc/os-release ]; then
-    while IFS='=' read -r key value; do
-        # Remove surrounding quotes if present
-        value="${value%\"}"
-        value="${value#\"}"
-        case "$key" in
-            ID)
-                [[ "$value" == "fedora" || "$value" == "rhel" ]] && is_rhel_like=1
-                ;;
-            ID_LIKE)
-                [[ "$value" == *"rhel"* ]] && is_rhel_like=1
-                ;;
-        esac
-    done < /etc/os-release
-
-    if [[ -n "$is_rhel_like" ]]; then
-        # This system is Fedora/RHEL-like
-        files+=( /etc/profile.d/*.sh )
+        if [[ -n "$is_rhel_like" ]]; then
+            # This system is Fedora/RHEL-like
+            files+=( /etc/profile.d/*.sh )
+        fi
     fi
-fi
-    
+fi  
+
+[[ $- != *i* ]] 
+  
     for file in "${files[@]}"; do
         _h_sourcedtree_single "$file" "$depth" "$max_depth"
     done
@@ -641,11 +650,11 @@ expanded="${expanded// /}"      # optional: remove spaces if needed
 
 # Skip empty, duplicates, or unreadable files
 [[ -z "$expanded" ]] && return
-[[ -n ${SOURCED_FILES_MAP["$expanded"]} ]] && return
+[[ -n ${__H_SOURCED_FILES_MAP["$expanded"]} ]] && return
 [[ ! -f "$expanded" || ! -r "$expanded" ]] && return
 
-SOURCED_FILES_MAP["$expanded"]=1
-SOURCED_FILES_LIST+=("$expanded")
+__H_SOURCED_FILES_MAP["$expanded"]=1
+__H_SOURCED_FILES_LIST+=("$expanded")
 
     local line f left right
 

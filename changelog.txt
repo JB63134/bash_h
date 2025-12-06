@@ -1,3 +1,6 @@
+V3.0.21
+     Fixed problem with variable expansion - Passed Shellcheck
+
 V3.0.20
      Major overhaul of sourced file detection to handle more nested sourced files, conditional sourcing, etc.
      also follows bash internal logic for startup files now.

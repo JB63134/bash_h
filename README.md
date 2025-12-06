@@ -3,9 +3,9 @@
 [![MIT License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Version](https://img.shields.io/badge/version-3.0.20-blue)](https://github.com/JB63134/bash_h/releases)
 
-`h` is a full fledged command resolution engine that unifies help into one shortcut - h     `h` is a powerful Bash CLI helper that analyzes commands, functions, aliases, builtins, keywords, and external binaries.   It helps you understand what a command is, and shows available documentation.
+**hh** is a full fledged command resolution engine that unifies help into one shortcut - **h** It helps you understand what a command is, and shows available documentation.
 
----
+
 
 --------------------------------------------------------------------------------------------
 

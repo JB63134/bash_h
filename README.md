@@ -3,7 +3,8 @@
 [![MIT License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Version](https://img.shields.io/badge/version-3.0.20-blue)](https://github.com/JB63134/bash_h/releases)
 
-**hh** is a full fledged command resolution engine that unifies help into one shortcut - **h**    It helps you understand what a command is, and shows available documentation.
+**hh** is a full fledged command resolution engine that unifies help into one shortcut - **h**    
+It helps you understand what a command is, and shows available documentation.
 
 I decided to write this version of **h** so that I could get help from multiple sources.  
 For binaries '<command> --help', -help, -h, or -?.  

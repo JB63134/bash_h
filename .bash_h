@@ -2,7 +2,7 @@
 #------------------------------------------------------------------------
 # h.sh  aka .bash_h
 # Main Function: h
-# Purpose: bash help tool give the user some idea of
+# Purpose: bash help tool give the user some idea of 
 #          whats happening for any command they run.
 #------------------------------------------------------------------------
 # If not running interactively, don't do anything
@@ -158,7 +158,9 @@ h() {
     # ------------------------------------------------------------------------- 
     if [[ "$cmd" == "]" ]]; then
         printf "%s├─ Detected BASH Keyword ${CYAN}'%s' ${RESET}\n" "$indent" "$cmd"
-        printf "%s    ↳ ${CYAN}%s${RESET} -- Ends a conditional test expression.\n" "$indent" "$cmd"
+        printf "%s    ↳ ${CYAN}%s${RESET} has no help file\n" "$indent" "$cmd"
+        printf "%s    ↳ Definition:\n\n" "$indent"
+        printf "%s          ${CYAN}%s${RESET} -- Ends a conditional test expression.\n" "$indent" "$cmd"
         return 0
     fi
 
@@ -204,26 +206,34 @@ h() {
                     !)    description="Negates the exit status of a command or pipeline." ;;
                 esac
             printf "%s├─ Detected BASH Keyword ${CYAN}'%s' ${RESET}\n" "$indent" "$cmd"
-            printf "%s    ↳ ${CYAN}%s${RESET} -- %s\n" "$indent" "$cmd" "$description"
+            printf "%s    ↳ ${CYAN}%s${RESET} has no help file\n" "$indent" "$cmd"
+            printf "%s    ↳ Definition:\n\n" "$indent"
+            printf "%s          ${CYAN}%s${RESET} -- %s\n" "$indent" "$cmd" "$description"
             return 0
             ;;
         esac
 
         if [[ "$cmd" == "esac" ]]; then
             printf "%s├─ Detected BASH Keyword ${CYAN}'%s' ${RESET}\n" "$indent" "$cmd"
-            printf "%s    ↳ ${CYAN}%s${RESET} -- Ends a case statement.\n" "$indent" "$cmd"
+            printf "%s    ↳ ${CYAN}%s${RESET} has no help file\n" "$indent" "$cmd"
+            printf "%s    ↳ Definition:\n\n" "$indent"
+            printf "%s          ${CYAN}%s${RESET} -- Ends a case statement.\n" "$indent" "$cmd"
             return 0
         fi
 
         if [[ "$cmd" == "}" ]]; then
             printf "%s├─ Detected BASH Keyword ${CYAN}'%s' ${RESET}\n" "$indent" "$cmd"
-            printf "%s    ↳ ${CYAN}%s${RESET} -- Ends a group of commands in a block.\n" "$indent" "$cmd"
+            printf "%s    ↳ ${CYAN}%s${RESET} has no help file\n" "$indent" "$cmd"
+            printf "%s    ↳ Definition:\n\n" "$indent"
+            printf "%s          ${CYAN}%s${RESET} -- Ends a group of commands in a block.\n" "$indent" "$cmd"
             return 0
         fi
       
         if [[ "$cmd" == "]]" ]]; then
             printf "%s├─ Detected BASH Keyword ${CYAN}'%s' ${RESET}\n" "$indent" "$cmd"
-            printf "%s    ↳ ${CYAN}%s${RESET} -- Ends a conditional test expression.\n" "$indent" "$cmd"
+            printf "%s    ↳ ${CYAN}%s${RESET} has no help file\n" "$indent" "$cmd"
+            printf "%s    ↳ Definition:\n\n" "$indent"
+            printf "%s          ${CYAN}%s${RESET} -- Ends a conditional test expression.\n" "$indent" "$cmd"
             return 0
         fi
     fi
@@ -309,8 +319,8 @@ h() {
         alias_expansion=$(_h_expand_vars "$alias_expansion")
         alias_def=$(alias "$cmd")
         
-        printf "%s├─ ${CYAN}'%s' ${RESET}is an alias → resolves to: ${CYAN}%s${RESET}\n" "$indent" "$cmd" "$alias_def"
-    
+        printf "%s├─ ${CYAN}'%s' ${RESET}is an alias:\n" "$indent" "$cmd"
+        printf "%s    ↳ Resolves to: ${CYAN}%s${RESET}\n" "$indent" "$alias_def"
         # Show where alias is defined
         local found_location=""
         local line_number
@@ -352,10 +362,16 @@ h() {
             return 1
         }
         
-        local cmd_real perlfound file_info 
+        local cmd_real perlfound file_info formatted_type
         cmd_real=$(readlink -f "$cmd_path" 2>/dev/null || echo "$cmd_path")
         file_info=$(file -b "$cmd_real")
-        perlfound=0
+        formatted_type=$(printf "%s" "$file_info" | sed -E \
+            $'s/, interpreter/\\\ninterpreter/g; 
+              s/, version/\\\nversion/g; 
+              s/, dynamically/\\\ndynamically/g; 
+              s/, BuildID/\\\nBuildID/g; 
+              s/, for /\\\nfor /g')
+        perlfound=0     
         
         if command -v perl &>/dev/null; then
             perlfound=1
@@ -369,9 +385,16 @@ h() {
             cmd_path="$cmd_real"
             cmd="$cmd_real"
         fi
+        
+        if grep -qiE 'script|text executable' <<< "$file_info"; then
+            printf "%s    ↳ Script Type: \n" "$indent"
+                while IFS= read -r line; do
+                    printf "%s    ⎟    ${CYAN}%s${RESET}\n" "$indent" "$line"
+                done <<< "$formatted_type"    
+        fi
+        
         # Show script contents if text executable
         if [[ "$file_info" == *"script"* || "$file_info" == *"text executable"* ]]; then
-
             printf "%s    ↳ Showing first 50 lines of script ${CYAN}'%s'${RESET}:\n" "$indent" "$cmd"
             if (( perlfound == 0 )); then 
                 printf "%s    ↳ ${YELLOW}Optional dependency 'perl' missing — syntax highlighting reduced${RESET}\n" "$indent" 
@@ -461,7 +484,7 @@ EOF
 _h_ver() {
     cat <<'EOF'
 
-     h v3.0.24 — Bash help tool
+     h v3.0.28 — Bash help tool
      Author : John Blair
           
      MIT License

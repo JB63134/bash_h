@@ -72,10 +72,10 @@ If no command is provided, `h` will analyze your **most recent command**.
 
 ## Screenshots / Output Preview
 
+![binry](images/awk.png)
 ![Aliases](images/alias.png)
 ![Functions](images/function.png)
 ![Builtins and Keywords](images/builtin-keyword.png)
-![binry](images/awk.png)
 ![Script](images/script.png)
 
 --------------------------------------------------------------------------------------------

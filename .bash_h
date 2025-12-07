@@ -351,27 +351,27 @@ h() {
             printf "%s${RED}Command not found: '%s'${RESET}\n" "$indent" "$cmd"
             return 1
         }
-        local cmd_real     
-        local file_info
+        
+        local cmd_real perlfound file_info 
         cmd_real=$(readlink -f "$cmd_path" 2>/dev/null || echo "$cmd_path")
         file_info=$(file -b "$cmd_real")
+        perlfound=0
         
+        if command -v perl &>/dev/null; then
+            perlfound=1
+        fi
+
         printf "%s├─ ${CYAN}'%s' ${RESET}is an external command\n" "$indent" "$cmd"
         printf "%s    ↳ Path: ${CYAN}%s${RESET}\n" "$indent" "$cmd_path"    
   
         if [[ "$cmd_real" != "$cmd_path" ]]; then # && \
             printf "%s    ↳ ${YELLOW}Symbolic link ${RESET}to: ${YELLOW}%s${RESET}\n" "$indent" "$cmd_real"
             cmd_path="$cmd_real"
+            cmd="$cmd_real"
         fi
-
-        local perlfound
-        perlfound=0
-        if command -v perl &>/dev/null; then
-            perlfound=1
-        fi
-        
         # Show script contents if text executable
         if [[ "$file_info" == *"script"* || "$file_info" == *"text executable"* ]]; then
+
             printf "%s    ↳ Showing first 50 lines of script ${CYAN}'%s'${RESET}:\n" "$indent" "$cmd"
             if (( perlfound == 0 )); then 
                 printf "%s    ↳ ${YELLOW}Optional dependency 'perl' missing — syntax highlighting reduced${RESET}\n" "$indent" 
@@ -461,7 +461,7 @@ EOF
 _h_ver() {
     cat <<'EOF'
 
-     h v3.0.23 — Bash help tool
+     h v3.0.24 — Bash help tool
      Author : John Blair
           
      MIT License

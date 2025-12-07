@@ -1,3 +1,6 @@
+V3.0.30
+     keyword definitions clarified - fixed usage
+
 V3.028
      added script info and multiple ui updates
 

@@ -330,8 +330,7 @@ h() {
              [[ -r "$file" ]] || continue
              if grep -qE "^[[:space:]]*alias[[:space:]]+${cmd}=" "$file"; then
                 found_location="$file"
-                line_number=$(grep -nE "^[[:space:]]*alias[[:space:]]+$cmd=" "$file" | head -n1 | cut -d: -f1)
-                
+                line_number=$(grep -nE "^[[:space:]]*alias[[:space:]]+$cmd=" "$file" | head -n1 | cut -d: -f1)               
                 printf "%s    ↳ Defined in: ${CYAN}%s (line %s)${RESET}\n" "$indent" "$file" "$line_number"
              fi
         done
@@ -352,9 +351,9 @@ h() {
             printf "%s${RED}Command not found: '%s'${RESET}\n" "$indent" "$cmd"
             return 1
         }
-        local cmd_real             
-        cmd_real=$(readlink -f "$cmd_path" 2>/dev/null || echo "$cmd_path")
+        local cmd_real     
         local file_info
+        cmd_real=$(readlink -f "$cmd_path" 2>/dev/null || echo "$cmd_path")
         file_info=$(file -b "$cmd_real")
         
         printf "%s├─ ${CYAN}'%s' ${RESET}is an external command\n" "$indent" "$cmd"
@@ -365,7 +364,8 @@ h() {
             cmd_path="$cmd_real"
         fi
 
-        local perlfound=0
+        local perlfound
+        perlfound=0
         if command -v perl &>/dev/null; then
             perlfound=1
         fi
@@ -386,21 +386,23 @@ h() {
 
     # Show help for external commands 
         local output cmdname hout
-        local output_shown=0 
-        local help_flags=(--help -help -h "-?") 
+        local output_shown
+        local help_flags
+        help_flags=(--help -help -h "-?") 
         cmdname=$(basename "$cmd_path")
+        output_shown=0
+        
+for flag in "${help_flags[@]}"; do
+    output="$("$cmd_path" "$flag" 2>&1 || true)"
 
-        for flag in "${help_flags[@]}"; do
-            if output=$("$cmd_path" "$flag" 2>&1); then
-                if [[ -n "$output" ]]; then
-                    printf "%s    ↳ Showing${CYAN} '%s %s'${RESET}:\n\n" "$indent" "$cmdname" "$flag"
-                    printf "%s\n\n" "$output" | sed "s/^/$indent         /"
-                    output_shown=1
-                    break
-                fi
-            fi
-        done
-
+    if [[ -n "$output" ]] && is_help_output "$output"; then
+        printf "%s    ↳ Showing${CYAN} '%s %s'${RESET}:\n\n" \
+            "$indent" "$cmdname" "$flag"
+        printf "%s\n\n" "$output" | sed "s/^/$indent         /"
+        output_shown=1
+        break
+    fi
+done
         # Fallback if no help output was shown
         if (( output_shown == 0 )); then
             local cmd_only="${cmd_path##*/}"
@@ -410,7 +412,7 @@ h() {
                 printf "%s    ↳ Info page available via ${CYAN}'info %s'${RESET}\n" "$indent" "$cmd_only" 
             else 
                 hout=$(help "$cmd" 2>&1)
-                # Filter known useless help output
+                # more help some binaries?
                 if [[ -n "$hout" && ! "$hout" =~ [Nn]o[[:space:]]help[[:space:]]topics ]]; then
                     printf "%s    ↳ Showing${CYAN} 'help %s'${RESET}:\n\n" "$indent" "$cmd"
                     printf "%s\n" "$hout" | sed "s/^/$indent        /"
@@ -459,7 +461,7 @@ EOF
 _h_ver() {
     cat <<'EOF'
 
-     h v3.0.21 — Bash help tool
+     h v3.0.23 — Bash help tool
      Author : John Blair
           
      MIT License
@@ -485,6 +487,26 @@ _h_ver() {
      SOFTWARE.
 
 EOF
+}
+
+#------------------------------------------------------------------------
+# Function: is_help_output
+# Purpose: check output to identify binaries that still show help with non zero exit codes
+#------------------------------------------------------------------------
+is_help_output() {
+    local text="$1"
+
+    # Rule 1: starts with "Usage:"
+    [[ $text =~ ^Usage: ]] && return 0
+
+    # Rule 2: contains OBJECT := definition
+    [[ $text == *"OBJECT :="* ]] && return 0
+
+    # Rule 3: contains common help markers
+    [[ $text == *"Commands:"* ]] && return 0
+    [[ $text == *"Options:"* ]] && return 0
+
+    return 1
 }
 
 #------------------------------------------------------------------------

@@ -196,9 +196,9 @@ h() {
             then|else|elif|fi|do|done|in|!|])
                 description=""
                 case "$cmd" in
-                    then) description="Begins the command block for a true condition." ;;
-                    else) description="Begins the command block if the condition is false." ;;
-                    elif) description="Introduces a new condition if the previous one is false." ;;
+                    then) description="Part of an if statment - Begins the command block for a true condition." ;;
+                    else) description="Part of an if statment - Begins the command block if the condition is false." ;;
+                    elif) description="Part of an if statment - Introduces a new condition if the previous one is false." ;;
                     fi)   description="Ends an if statement." ;;
                     do)   description="Begins the body of a loop or conditional block." ;;
                     done) description="Ends the body of a loop or conditional block." ;;
@@ -225,7 +225,7 @@ h() {
             printf "%s├─ Detected BASH Keyword ${CYAN}'%s' ${RESET}\n" "$indent" "$cmd"
             printf "%s    ↳ ${CYAN}%s${RESET} has no help file\n" "$indent" "$cmd"
             printf "%s    ↳ Definition:\n\n" "$indent"
-            printf "%s          ${CYAN}%s${RESET} -- Ends a group of commands in a block.\n" "$indent" "$cmd"
+            printf "%s          ${CYAN}%s${RESET} -- Ends a command block.\n" "$indent" "$cmd"
             return 0
         fi
       
@@ -415,17 +415,17 @@ h() {
         cmdname=$(basename "$cmd_path")
         output_shown=0
         
-for flag in "${help_flags[@]}"; do
-    output="$("$cmd_path" "$flag" 2>&1 || true)"
+        for flag in "${help_flags[@]}"; do
+            output="$("$cmd_path" "$flag" 2>&1 || true)"
 
-    if [[ -n "$output" ]] && is_help_output "$output"; then
-        printf "%s    ↳ Showing${CYAN} '%s %s'${RESET}:\n\n" \
-            "$indent" "$cmdname" "$flag"
-        printf "%s\n\n" "$output" | sed "s/^/$indent         /"
-        output_shown=1
-        break
-    fi
-done
+            if [[ -n "$output" ]] && is_help_output "$output"; then
+                printf "%s    ↳ Showing${CYAN} '%s %s'${RESET}:\n\n" "$indent" "$cmdname" "$flag"
+                printf "%s\n\n" "$output" | sed "s/^/$indent         /"
+                output_shown=1
+                break
+            fi
+        done
+        
         # Fallback if no help output was shown
         if (( output_shown == 0 )); then
             local cmd_only="${cmd_path##*/}"
@@ -456,23 +456,22 @@ _h_usage() {
     cat <<'EOF'
 
      Usage:  h [command]  
-     Analyzes a Bash cli command, aliases, builtins, keywords, functions, scripts or binaries. 
-     Showing where it’s defined, how it expands, and what help or documentation is available.
+     h is a command resolution engine, h will determine what a command 
+     actually is and try to provide any relevant help that it finds.
 
      Options:
            -h --help or h      Show this help text.
            -v --version        Show version information.
-           -f --fzf            Use fzf to interactivly search for commands
+           -f --fzf            Use fzf to interactivly search commands
                        
      Examples:
-           h                   # Automatically analyzes your most recent command
-           h awk               # Analyzes 'awk'
-           h ls                # Is 'ls' a builtin, keyword, alias, function, script or binary?
+           h                   # Get help for your most recent command
+           h awk               # Get help for 'awk'
 
      Features:
-       • Handles builtins, aliases, keywords, functions, and external commands
-       • Syntax-highlighted preview of functions and scripts
-       • Shows --help/-help/-h/-? output or points to man/info/tldr pages
+       • Shows --help/-help/-h/-? output or points to man/info pages
+       • Provide help output for builtins and keywords 
+       • For aliases, functions and scripts display previews of contents.
   
 EOF
 }
@@ -484,7 +483,7 @@ EOF
 _h_ver() {
     cat <<'EOF'
 
-     h v3.0.28 — Bash help tool
+     h v3.0.30 — Bash help tool  
      Author : John Blair
           
      MIT License

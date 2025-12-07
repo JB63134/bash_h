@@ -1,3 +1,6 @@
+V3.028
+     added script info and multiple ui updates
+
 V3.0.24
      UI Fix to give user confirmation that a symlink was followed for a script.
 

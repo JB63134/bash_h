@@ -1,3 +1,7 @@
+V3.0.23
+     Added function to check help output to identify binaries that still show help with non zero exit codes,  
+     Then fall back to man and info...
+
 V3.0.21
      Fixed problem with variable expansion - Passed Shellcheck
 

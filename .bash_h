@@ -162,8 +162,8 @@ h() {
         printf "%s    ↳ Definition:\n\n" "$indent"
         printf "%s          ${CYAN}%s${RESET} -- Ends a conditional test expression.\n" "$indent" "$cmd"
         return 0
-    fi
-
+    fi 
+    
     # -------------------------------------------------------------------------
     # Detect command type
     # -------------------------------------------------------------------------
@@ -178,16 +178,16 @@ h() {
     # Handle keywords and provide help statements
     # -------------------------------------------------------------------------
     if [[ "$ctype" == "keyword" ]]; then
+        printf "%s├─ Detected BASH Keyword ${CYAN}'%s' ${RESET}\n" "$indent" "$cmd"
+     
         case "$cmd" in
         if|case|for|select|while|until|function|time|[[|coproc)
-            printf "%s├─ Detected BASH Keyword ${CYAN}'%s' ${RESET}\n" "$indent" "$cmd"
             printf "%s    ↳ Showing  ${CYAN}'help %s'${RESET}:\n\n" "$indent" "$cmd"
             help "$cmd" 2>/dev/null | sed 's/^/    /'
             return 0
             ;;
         esac
         if [[ "$cmd" == "{" ]]; then
-            printf "%s├─ Detected BASH Keyword ${CYAN}'%s' ${RESET}\n" "$indent" "$cmd"
             printf "%s    ↳ Showing  ${CYAN}'help %s'${RESET}:\n\n" "$indent" "$cmd"
             help "$cmd" 2>/dev/null | sed 's/^/    /'
             return 0
@@ -205,7 +205,6 @@ h() {
                     in)   description="Specifies the list to iterate over in a loop." ;;
                     !)    description="Negates the exit status of a command or pipeline." ;;
                 esac
-            printf "%s├─ Detected BASH Keyword ${CYAN}'%s' ${RESET}\n" "$indent" "$cmd"
             printf "%s    ↳ ${CYAN}%s${RESET} has no help file\n" "$indent" "$cmd"
             printf "%s    ↳ Definition:\n\n" "$indent"
             printf "%s          ${CYAN}%s${RESET} -- %s\n" "$indent" "$cmd" "$description"
@@ -214,7 +213,6 @@ h() {
         esac
 
         if [[ "$cmd" == "esac" ]]; then
-            printf "%s├─ Detected BASH Keyword ${CYAN}'%s' ${RESET}\n" "$indent" "$cmd"
             printf "%s    ↳ ${CYAN}%s${RESET} has no help file\n" "$indent" "$cmd"
             printf "%s    ↳ Definition:\n\n" "$indent"
             printf "%s          ${CYAN}%s${RESET} -- Ends a case statement.\n" "$indent" "$cmd"
@@ -222,7 +220,6 @@ h() {
         fi
 
         if [[ "$cmd" == "}" ]]; then
-            printf "%s├─ Detected BASH Keyword ${CYAN}'%s' ${RESET}\n" "$indent" "$cmd"
             printf "%s    ↳ ${CYAN}%s${RESET} has no help file\n" "$indent" "$cmd"
             printf "%s    ↳ Definition:\n\n" "$indent"
             printf "%s          ${CYAN}%s${RESET} -- Ends a command block.\n" "$indent" "$cmd"
@@ -230,7 +227,6 @@ h() {
         fi
       
         if [[ "$cmd" == "]]" ]]; then
-            printf "%s├─ Detected BASH Keyword ${CYAN}'%s' ${RESET}\n" "$indent" "$cmd"
             printf "%s    ↳ ${CYAN}%s${RESET} has no help file\n" "$indent" "$cmd"
             printf "%s    ↳ Definition:\n\n" "$indent"
             printf "%s          ${CYAN}%s${RESET} -- Ends a conditional test expression.\n" "$indent" "$cmd"
@@ -242,20 +238,6 @@ h() {
     # Builtins
     # -------------------------------------------------------------------------
     if [[ "$ctype" == "builtin" ]]; then
-    
-        # Special builtins: `builtin` and `command`
-        if [[ "$cmd" == "builtin" || "$cmd" == "command" ]]; then    
-        
-            # Case: user typed plain `builtin` or `command`
-            if (( ${#fcmd[@]} == 1 )); then
-                printf "%s├─ ${CYAN}'%s'${RESET} is a shell builtin\n" "$indent" "$cmd"
-                printf "%s    ↳ Showing  ${CYAN}'help %s'${RESET}:\n\n" "$indent" "$cmd"
-                help "$cmd" 2>/dev/null | sed 's/^/    /'
-                return 0
-            fi
-            return 0    
-        fi
-    
         # Normal builtin
         printf "%s├─ ${CYAN}'%s'${RESET} is a shell builtin\n" "$indent" "$cmd"
         # Show help
@@ -291,13 +273,11 @@ h() {
         else
             printf "%s    ↳ Declared in: ${CYAN}%s (line %s)${RESET}\n" "$indent" "$file" "$line"
         fi
-        
+       
         printf "%s    ↳ Showing first 50 lines of function: ${CYAN}%s${RESET}\n\n"  "$indent" "$cmd"     
-           
         local func_content
         func_content=$(declare -f "$cmd")
         _h_highlight_script "$func_content" "$indent" "$file" "$line"
-        
         printf "\n%s    ======= End of function preview =======\n" "$indent"   
         return 0
     fi
@@ -477,13 +457,13 @@ EOF
 }
 
 #------------------------------------------------------------------------
-# Function: _h-ver
+# Function: _h_ver
 # Purpose : Display version information.
 #------------------------------------------------------------------------
 _h_ver() {
     cat <<'EOF'
 
-     h v3.0.30 — Bash help tool  
+     h v3.0.32 — Bash help tool  
      Author : John Blair
           
      MIT License
@@ -517,17 +497,13 @@ EOF
 #------------------------------------------------------------------------
 is_help_output() {
     local text="$1"
-
     # Rule 1: starts with "Usage:"
     [[ $text =~ ^Usage: ]] && return 0
-
     # Rule 2: contains OBJECT := definition
     [[ $text == *"OBJECT :="* ]] && return 0
-
     # Rule 3: contains common help markers
     [[ $text == *"Commands:"* ]] && return 0
     [[ $text == *"Options:"* ]] && return 0
-
     return 1
 }
 
@@ -622,7 +598,7 @@ _h_expand_vars() {
 
 #------------------------------------------------------------------------
 # Function: _h_sourcedtree
-# Purpose: Recursively scan .bashrc for ALL files that are sourced. including conditionals.
+# Purpose: Recursively scan for files that are sourced.
 #------------------------------------------------------------------------
 _h_sourcedtree() {
     __H_SOURCED_FILES_MAP=()
@@ -672,7 +648,6 @@ else
 fi  
 
 [[ $- != *i* ]] 
-  
     for file in "${files[@]}"; do
         _h_sourcedtree_single "$file" "$depth" "$max_depth"
     done
@@ -901,7 +876,6 @@ _h_check_dependencies() {
     local -n required="$1"
     local -n optional="$2"
     local exit_on_missing="${3:-1}"
-
     local missing_required=()
     local missing_optional=()
 
@@ -924,7 +898,6 @@ _h_check_dependencies() {
             fi
         fi
     fi
-
     return 0
 }
 

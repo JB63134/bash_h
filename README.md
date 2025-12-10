@@ -23,7 +23,7 @@ Sourced file detection supports debian and fedora / rhel setups
 
 * **Syntax-highlighting**:
   
-  * 50 line preview of scripts and functions
+  * 50 line preview of scripts and functions, can use bat as optional highlighter.
 * **aliases and functions**:
 
   * show alias definition or function body

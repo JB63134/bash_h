@@ -5,7 +5,9 @@
 
 **h** is a full fledged command resolution engine that unifies help into one shortcut - **h**    
 It helps you understand what a command is, and shows available documentation.
-
+  
+**h** started out as an alias h='eval "$(history -p !! | awk '''{print $1}''')" --help'
+  
 I decided to write this version of **h** so that I could get help from multiple sources.  
 For binaries '<command> --help', -help, -h, or -?.  
 For builtins and some keywords use 'help "command"'  

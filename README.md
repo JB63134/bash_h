@@ -79,23 +79,3 @@ If no command is provided, `h` will analyze your **most recent command**.
 ![Script](images/script.png)
 
 --------------------------------------------------------------------------------------------
-History: 
-
-V1.0.0 was a small alias: alias h='eval "$(history -p \!\! | awk '\''{print $1}'\'')" --help'
-
-V2.0.0 was a small function using fc similar to this:
-
-      h() {
-          last_cmd=$(fc -ln -1 | awk '{print $1}')
-          # Run the last command with --help appended
-          eval "$last_cmd --help"
-      }
-     
-V3.0.0
-      I decided to rewrite h so that i could get help from multiple sources.  
-      Using common flags like '<command> --help', -help, -h, or -?.  
-      For builtins and some keywords use 'help "command"'  
-      As a fallback, checks for both man pages and info pages then alerts the user if found.
-      For aliases, functions and scripts - handle displaying contents.  
-      
-------------------------------------------------------------------------------------------------------------------

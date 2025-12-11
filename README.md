@@ -21,23 +21,23 @@ Sourced file detection supports debian and fedora / rhel setups
 
 ## Optional dependencies
 
-fzf -- for interactive search    
-bat / batcat -- for pretty syntax-highlighting. h will fallback to an internal perl script for syntax-highlighting 
+`fzf` -- for interactive search    
+`bat` / `batcat` -- for pretty syntax-highlighting. `h` will fallback to an internal perl script for syntax-highlighting 
 
 ## Features
 
 * **Syntax-highlighting**:
   
-  * 50 line preview of scripts and functions, can use bat as optional highlighter.
-* **aliases and functions**:
+  * 50 line preview of scripts and functions, can use `bat` as optional highlighter.
+* **Aliases and Functions**:
 
   * show alias definition or function body
   * location (file and line number, or interactive shell)
-* **builtins and Keywords**:
+* **Builtins and Keywords**:
 
   * Display help output - 'help 'command''
   * Internal Descriptions for Edge cases missing help output  
-* Inspect **external binaries**:
+* Inspect **External Binaries**:
 
   * Displays the full resolved path and alerts you of symlinks
   * Display help output by iterating through common flags
@@ -54,7 +54,7 @@ Clone the repository and source the script in your `.bashrc` or `.bash_profile`:
 
 ```bash
 git clone https://github.com/JB63134/bash_h.git
-source /path/to/ca/.bash_h
+source /path/to/.bash_h
 ```
 
 ---

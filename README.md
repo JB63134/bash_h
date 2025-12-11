@@ -14,10 +14,15 @@ For builtins and some keywords use 'help "command"'
 As a fallback, checks for both man pages and info pages then alerts the user if found        
 For aliases, functions and scripts - handle displaying contents.  
 
-## Requires 
+## Requirements 
 
 Bash ≥ V4.4 and GNU utils    
 Sourced file detection supports debian and fedora / rhel setups 
+
+## Optional dependencies
+
+fzf -- for interactive search
+bat / batcat -- for pretty syntax-highlighting. h will fallback to an internal perl script for syntax-highlighting 
 
 ## Features
 
@@ -38,6 +43,7 @@ Sourced file detection supports debian and fedora / rhel setups
   * Display help output by iterating through common flags
   * Tries --help -help -h and -?
 * **Interactive search**: using `fzf` for commands (optional)
+* Supports TAB completion
 * Pretty-printed, colorized output (uses `tput` or ANSI colors)
 
 ---

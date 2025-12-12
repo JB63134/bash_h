@@ -22,7 +22,7 @@ Sourced file detection supports debian and fedora / rhel setups
 ## Optional dependencies
 
 `fzf` -- for interactive search    
-`bat` / `batcat` -- for pretty syntax-highlighting. `h` will fallback to an internal perl script for syntax-highlighting 
+`bat` / `batcat` -- for pretty syntax-highlighting. `h` will fallback to an internal perl script for basic highlighting 
 
 ## Features
 

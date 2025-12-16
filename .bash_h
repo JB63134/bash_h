@@ -385,7 +385,7 @@ h() {
         fi
 
     # Show help for external commands 
-        local output cmdname hout
+        local output cmdname 
         local output_shown
         local help_flags
         help_flags=(--help -help -h "-?") 

@@ -32,9 +32,8 @@ h() {
     # -------------------------
     # LOCAL Variables
     # -------------------------
-    local fcmd cmd ctype cmd_path alias_expansion RED GREEN CYAN RESET 
+    local fcmd cmd ctype cmd_path alias_expansion RED GREEN CYAN RESET indent
     local depth=${2:-0}
-    local indent
     indent=$(printf "%*s" $((depth * 4)) "")
     
     # -------------------------
@@ -137,7 +136,7 @@ h() {
                 local pick
                 pick=$(compgen -A function -A alias -A builtin -A command | sort -u | fzf --prompt="Get help for: ")
                 [[ -n "$pick" ]] || return 1
-                ca "$pick"
+                h "$pick"
                 return 0
             else
                 printf "%s    ↳ ${YELLOW}fzf is not installed.${RESET}\n" "$indent"
@@ -294,19 +293,17 @@ h() {
         local raw
         raw=$(alias "$cmd")
         alias_expansion=${raw#*=}         # remove 'name='
-        alias_expansion=${alias_expansion:1:${#alias_expansion}-2}   # trim outer quotes
-        # Expand environment vars safely (no command execution)
-        alias_expansion=$(_h_expand_vars "$alias_expansion")
+        alias_expansion=$(alias "$cmd" | sed -E "s/^$cmd='(.*)'$/\1/")   # trim outer quotes
+        alias_expansion=$(_h_expand_vars "$alias_expansion") # Expand environment vars safely (no command execution)
         alias_def=$(alias "$cmd")
         
         printf "%s├─ ${CYAN}'%s' ${RESET}is an alias:\n" "$indent" "$cmd"
         printf "%s    ↳ Resolves to: ${CYAN}%s${RESET}\n" "$indent" "$alias_def"
+        
         # Show where alias is defined
         local found_location=""
         local line_number
-        
         _h_sourcedtree
-
         #----------------------------
         # Enable nullglob temporarily 
         local nullglob_was=0
@@ -414,14 +411,7 @@ h() {
             elif command -v info &>/dev/null && info "$cmd_only" &>/dev/null; then
                 printf "%s    ↳ Info page available via ${CYAN}'info %s'${RESET}\n" "$indent" "$cmd_only" 
             else 
-                hout=$(help "$cmd" 2>&1)
-                # more help some binaries?
-                if [[ -n "$hout" && ! "$hout" =~ [Nn]o[[:space:]]help[[:space:]]topics ]]; then
-                    printf "%s    ↳ Showing${CYAN} 'help %s'${RESET}:\n\n" "$indent" "$cmd"
-                    printf "%s\n" "$hout" | sed "s/^/$indent        /"
-                else
-                    printf "%s    ↳ ${RED}No help found for ${CYAN}'%s'${RESET}\n" "$indent" "$cmd_only"
-                fi
+                printf "%s    ↳ ${RED}No help found for ${CYAN}'%s'${RESET}\n" "$indent" "$cmd_only"
             fi
         fi
         return 0
@@ -463,7 +453,7 @@ EOF
 _h_ver() {
     cat <<'EOF'
 
-     h v3.0.32 — Bash help tool  
+     h v3.0.35 — Bash help tool  
      Author : John Blair
           
      MIT License
@@ -647,7 +637,6 @@ else
     fi
 fi  
 
-[[ $- != *i* ]] 
     for file in "${files[@]}"; do
         _h_sourcedtree_single "$file" "$depth" "$max_depth"
     done
@@ -665,7 +654,6 @@ _h_sourcedtree_single() {
 local expanded
 expanded=$(_h_expand_path "$file")
 expanded="${expanded%%$'\n'}"   # strip newlines
-expanded="${expanded// /}"      # optional: remove spaces if needed
 
 # Skip empty, duplicates, or unreadable files
 [[ -z "$expanded" ]] && return

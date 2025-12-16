@@ -19,6 +19,8 @@ h_optional_deps=(tput fzf batcat bat)
 MAX_DEPTH=4
 OLD_PATH="$PATH"
 
+declare -g __H_SOURCED_SCANNED=0
+
 declare -gA __H_SOURCED_FILES_MAP=()   
 declare -ga __H_SOURCED_FILES_LIST=() 
 declare -gA __H_SEEN_ALIASES
@@ -81,6 +83,7 @@ h() {
         #--------------------------
         # Reset arrays on first run
         #--------------------------
+        __H_SOURCED_SCANNED=0
         __H_SEEN_ALIASES=()
         __H_SEEN_COMMANDS=()
         __H_SEEN_BUILTINS=()
@@ -176,62 +179,33 @@ h() {
     # -------------------------------------------------------------------------
     # Handle keywords and provide help statements
     # -------------------------------------------------------------------------
-    if [[ "$ctype" == "keyword" ]]; then
-        printf "%s├─ Detected BASH Keyword ${CYAN}'%s' ${RESET}\n" "$indent" "$cmd"
-     
-        case "$cmd" in
-        if|case|for|select|while|until|function|time|[[|coproc)
-            printf "%s    ↳ Showing  ${CYAN}'help %s'${RESET}:\n\n" "$indent" "$cmd"
-            help "$cmd" 2>/dev/null | sed 's/^/    /'
-            return 0
-            ;;
-        esac
-        if [[ "$cmd" == "{" ]]; then
-            printf "%s    ↳ Showing  ${CYAN}'help %s'${RESET}:\n\n" "$indent" "$cmd"
-            help "$cmd" 2>/dev/null | sed 's/^/    /'
-            return 0
-        fi
-        case "$cmd" in
-            then|else|elif|fi|do|done|in|!|])
-                description=""
-                case "$cmd" in
-                    then) description="Part of an if statment - Begins the command block for a true condition." ;;
-                    else) description="Part of an if statment - Begins the command block if the condition is false." ;;
-                    elif) description="Part of an if statment - Introduces a new condition if the previous one is false." ;;
-                    fi)   description="Ends an if statement." ;;
-                    do)   description="Begins the body of a loop or conditional block." ;;
-                    done) description="Ends the body of a loop or conditional block." ;;
-                    in)   description="Specifies the list to iterate over in a loop." ;;
-                    !)    description="Negates the exit status of a command or pipeline." ;;
-                esac
-            printf "%s    ↳ ${CYAN}%s${RESET} has no help file\n" "$indent" "$cmd"
-            printf "%s    ↳ Definition:\n\n" "$indent"
-            printf "%s          ${CYAN}%s${RESET} -- %s\n" "$indent" "$cmd" "$description"
-            return 0
-            ;;
-        esac
+declare -A __H_KEYWORD_DESC=(
+    [then]="Part of an if statment - Begins the command block for a true condition." 
+    [else]="Part of an if statment - Begins the command block if the condition is false." 
+    [elif]="Part of an if statment - Introduces a new condition if the previous one is false." 
+    [fi]="Ends an if statement."
+    [do]="Begins the body of a loop or conditional block."
+    [done]="Ends the body of a loop or conditional block." 
+    [in]="Specifies the list to iterate over in a loop." 
+    [!]="Negates the exit status of a command or pipeline." 
+    [esac]="Ends a case statement."
+    ["}"]="Ends a command block."
+    ["]]"]="Ends a conditional test expression."
+)
 
-        if [[ "$cmd" == "esac" ]]; then
-            printf "%s    ↳ ${CYAN}%s${RESET} has no help file\n" "$indent" "$cmd"
-            printf "%s    ↳ Definition:\n\n" "$indent"
-            printf "%s          ${CYAN}%s${RESET} -- Ends a case statement.\n" "$indent" "$cmd"
-            return 0
-        fi
+if [[ $ctype == keyword ]]; then
+    printf "%s├─ Detected BASH Keyword ${CYAN}'%s' ${RESET}\n" "$indent" "$cmd"
 
-        if [[ "$cmd" == "}" ]]; then
-            printf "%s    ↳ ${CYAN}%s${RESET} has no help file\n" "$indent" "$cmd"
-            printf "%s    ↳ Definition:\n\n" "$indent"
-            printf "%s          ${CYAN}%s${RESET} -- Ends a command block.\n" "$indent" "$cmd"
-            return 0
-        fi
-      
-        if [[ "$cmd" == "]]" ]]; then
-            printf "%s    ↳ ${CYAN}%s${RESET} has no help file\n" "$indent" "$cmd"
-            printf "%s    ↳ Definition:\n\n" "$indent"
-            printf "%s          ${CYAN}%s${RESET} -- Ends a conditional test expression.\n" "$indent" "$cmd"
-            return 0
-        fi
+    if help "$cmd" &>/dev/null; then
+        printf "%s    ↳ Showing  ${CYAN}'help %s'${RESET}:\n\n" "$indent" "$cmd"
+        help "$cmd" 2>/dev/null | sed 's/^/    /'
+    elif [[ -n "${__H_KEYWORD_DESC[$cmd]}" ]]; then
+        printf "%s    ↳ ${CYAN}%s${RESET} has no help file\n" "$indent" "$cmd"
+        printf "%s    ↳ Definition:\n\n" "$indent"
+        printf "%s          ${CYAN}%s${RESET} -- %s\n" "$indent" "$cmd" "${__H_KEYWORD_DESC[$cmd]}"
     fi
+    return 0
+fi
 
     # -------------------------------------------------------------------------
     # Builtins
@@ -303,7 +277,7 @@ h() {
         # Show where alias is defined
         local found_location=""
         local line_number
-        _h_sourcedtree
+        _h_ensure_sourcedtree
         #----------------------------
         # Enable nullglob temporarily 
         local nullglob_was=0
@@ -453,7 +427,7 @@ EOF
 _h_ver() {
     cat <<'EOF'
 
-     h v3.0.35 — Bash help tool  
+     h v3.0.37 — Bash help tool  
      Author : John Blair
           
      MIT License
@@ -591,8 +565,6 @@ _h_expand_vars() {
 # Purpose: Recursively scan for files that are sourced.
 #------------------------------------------------------------------------
 _h_sourcedtree() {
-    __H_SOURCED_FILES_MAP=()
-    __H_SOURCED_FILES_LIST=()
     local file files depth max_depth
     depth=0
     max_depth="${MAX_DEPTH:-5}"
@@ -747,6 +719,13 @@ _h_expand_path() {
     p="${p//$'\n'/}"
     p="${p%%*( )}"
     printf '%s' "$p"
+}
+    #-----------------------------------------------------------
+    # Helper: _h_ensure_sourcedtree
+_h_ensure_sourcedtree() {
+    (( __H_SOURCED_SCANNED )) && return
+    _h_sourcedtree
+    __H_SOURCED_SCANNED=1
 }
 
 #------------------------------------------------------------------------

@@ -1,4 +1,8 @@
-V3.0.32
+V3.0.35
+     Fixed problem with alias expansion
+     code cleanup. -- passed shellcheck
+
+V3.0.32 
      Ui fixes
 
 V3.0.30

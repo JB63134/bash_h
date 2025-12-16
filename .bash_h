@@ -20,14 +20,13 @@ MAX_DEPTH=4
 OLD_PATH="$PATH"
 
 declare -g __H_SOURCED_SCANNED=0
-
 declare -gA __H_SOURCED_FILES_MAP=()   
 declare -ga __H_SOURCED_FILES_LIST=() 
-declare -gA __H_SEEN_ALIASES
-declare -gA __H_SEEN_COMMANDS
-declare -gA __H_SEEN_BUILTINS
-declare -gA __H_SHADOW_SEEN
-declare -gA __H_VISITED        
+declare -gA __H_SEEN_ALIASES=()
+declare -gA __H_SEEN_COMMANDS=()
+declare -gA __H_SEEN_BUILTINS=()
+declare -gA __H_SHADOW_SEEN=()
+declare -gA __H_VISITED=()      
 complete -F _h_completion h
 
 h() {
@@ -267,8 +266,8 @@ fi
         local raw
         raw=$(alias "$cmd")
         alias_expansion=${raw#*=}         # remove 'name='
-        alias_expansion=$(alias "$cmd" | sed -E "s/^$cmd='(.*)'$/\1/")   # trim outer quotes
-        alias_expansion=$(_h_expand_vars "$alias_expansion") # Expand environment vars safely (no command execution)
+        alias_expansion=${alias_expansion:1:${#alias_expansion}-2}   # trim outer quotes
+        alias_expansion=$(_ca_expand_vars "$alias_expansion")
         alias_def=$(alias "$cmd")
         
         printf "%s├─ ${CYAN}'%s' ${RESET}is an alias:\n" "$indent" "$cmd"

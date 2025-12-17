@@ -246,7 +246,7 @@ fi
             printf "%s    ↳ Declared in: ${CYAN}%s (line %s)${RESET}\n" "$indent" "$file" "$line"
         fi
        
-        printf "%s    ↳ Showing first 50 lines of function: ${CYAN}%s${RESET}\n\n"  "$indent" "$cmd"     
+        printf "%s    ↳ Showing preview of function: ${CYAN}%s${RESET}\n\n"  "$indent" "$cmd"     
         local func_content
         func_content=$(declare -f "$cmd")
         _h_highlight_script "$func_content" "$indent" "$file" "$line"
@@ -345,7 +345,7 @@ fi
         
         # Show script contents if text executable
         if [[ "$file_info" == *"script"* || "$file_info" == *"text executable"* ]]; then
-            printf "%s    ↳ Showing first 50 lines of script ${CYAN}'%s'${RESET}:\n" "$indent" "$cmd"
+            printf "%s    ↳ Showing preview of script ${CYAN}'%s'${RESET}:\n" "$indent" "$cmd"
             if (( perlfound == 0 )); then 
                 printf "%s    ↳ ${YELLOW}Optional dependency 'perl' missing — syntax highlighting reduced${RESET}\n" "$indent" 
             fi

@@ -1,3 +1,6 @@
+V3.0.38
+     code cleanup. ui/ux 
+
 V3.0.37
      code cleanup. 
      sourced file detection guarded to one execution per invocation. fix for possible expansion

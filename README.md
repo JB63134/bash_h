@@ -107,6 +107,7 @@ h -v                # Show version info
 ![Functions](images/function.png)
 ![Builtins and Keywords](images/builtin-keyword.png)
 ![Script](images/script.png)
+![trace](images/trace.png)
 
 --------------------------------------------------------------------------------------------
 

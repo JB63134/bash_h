@@ -889,11 +889,9 @@ _h_check_dependencies() {
 # Purpose: Command Resolution Trace (aliases, functions, builtins, PATH)
 #------------------------------------------------------------------------
 _h_print_trace() {
- #   _h_restore_path
     local cmd="$1"
     local path_winner=0
     local bash_winner_type=""
-  #  local kernel_target=""
     local -a res
     local winner=""
     local found_path=""
@@ -901,126 +899,129 @@ _h_print_trace() {
 
     _h_resolve_command "$cmd" res
 
-    printf "\n%s\n\nResolution order:\n\n" "$cmd"
+    printf "\n      %s -- command resolution order:\n\n" "$cmd"
 
     # 1. Alias
-    printf "1 - alias\n\n"
+    printf "    ├─ Alias?\n"
     if [[ ${res[0]} == alias\|found* ]]; then
         alias_def="${res[0]#*|found|}"
-        printf "    %s - found → %s\n\n" "$cmd" "$alias_def"
+        printf "    ⎟    ↳ %s - found → %s\n" "$cmd" "$alias_def"
         winner="alias"
         bash_winner_type="alias"
         found_path="$cmd"
     else
-        printf "    %s - not found\n\n" "$cmd"
+        printf "    ⎟    ↳ %s - not found\n" "$cmd"
     fi
-
+    printf "    ⎟   \n" 
+    
     # 2. Function
-    printf "2 - function\n\n"
+    printf "    ├─ Function?\n"
     if [[ ${res[1]} == function\|found* ]]; then
         IFS='|' read -r _ _ file line <<< "${res[1]}"
-        printf "    %s - defined in %s:%s\n\n" "$cmd" "$file" "$line"
+        printf "    ⎟    ↳ %s - defined in %s:%s\n" "$cmd" "$file" "$line"
         [[ -z $winner ]] && winner="function" && bash_winner_type="function"
         [[ -z $found_path ]] && found_path="$cmd"
     else
-        printf "    %s - not found\n\n" "$cmd"
+        printf "    ⎟    ↳ %s - not found\n" "$cmd"
     fi
-
+    printf "    ⎟   \n"
+    
     # 3. Builtin
-    printf "3 - builtin\n\n"
+    printf "    ├─ Builtin/Keyword?\n"
     if [[ ${res[2]} == builtin\|found ]]; then
         if [[ -z $winner ]]; then
-            printf "    %s - enabled\n\n" "$cmd"
+            printf "    ⎟    ↳ %s - enabled\n" "$cmd"
             winner="builtin"
             bash_winner_type="builtin"
             [[ -z $found_path ]] && found_path="$cmd"
         else
             # builtin shadowed by alias or function
-            printf "    %s - enabled [shadowed]\n\n" "$cmd"
+            printf "    ⎟    ↳ %s - enabled [shadowed]\n" "$cmd"
         fi
     else
-        printf "    %s - not found\n\n" "$cmd"
+        printf "    ⎟    ↳ %s - not found\n" "$cmd"
     fi
-
+    printf "    ⎟   \n"
+    
     # 4. PATH
-    printf "4 - \$PATH in order\n\n"
+    printf "    ├─ \$PATH in order\n"
+    printf "    ⎟   \n"
     for ((i=3; i<${#res[@]}; i++)); do
-        IFS='|' read -r _ dir state target <<< "${res[i]}"
+        IFS='|' read -r kind dir state target <<< "${res[i]}"
         case "$state" in
             notfound)
-                printf "              ↳ %-24s %s - not found\n" "$dir" "$cmd"
-                ;;
+                printf "    ⎟    ↳ %-24s %s - not found\n" "$dir" "$cmd"
+                ;;                
             file)
                 if [[ -z $found_path ]]; then
-                    printf "              ↳ %-24s %s - found\n" "$dir" "$cmd"
+                    printf "    ⎟    ↳ %-24s %s - found\n" "$dir" "$cmd"
                     found_path="$dir/$cmd"
                     [[ -z $bash_winner_type ]] && path_winner=1
                 else
-                    printf "              ↳ %-24s %s - found [shadowed]\n" "$dir" "$cmd"
+                    printf "    ⎟    ↳ %-24s %s - found [shadowed]\n" "$dir" "$cmd"
                 fi
                 ;;
             symlink)
                 if [[ -z $found_path ]]; then
-                    printf "              ↳ %-24s %s - symlink found [link to %s]\n" \
+                    printf "    ⎟    ↳ %-24s %s - symlink found [link to %s]\n" \
                         "$dir" "$cmd" "$target"
                     found_path="$dir/$cmd"
-              #      kernel_target="$target"
                     [[ -z $bash_winner_type ]] && path_winner=1
                 else
-                    printf "              ↳ %-24s %s - symlink found [shadowed]\n" "$dir" "$cmd"
+                    printf "    ⎟    ↳ %-24s %s - symlink found [shadowed]\n" "$dir" "$cmd"
                 fi
                 ;;
         esac
     done
-
+            printf "    └──────────────────────────────────────────\n\n" "$CA_INDENT"
 # Bash resolution target
-printf "\nBash resolution target:\n"
+printf "\n    Bash resolution target:\n"
 if [[ -n $found_path ]]; then
     local canonical
     canonical=$(readlink -f -- "$found_path" 2>/dev/null || echo "$found_path")
     case "$bash_winner_type" in
         alias)
-            printf "  → Executed: %s (alias: %s)\n" "$found_path" "$alias_def"
+            printf "      → Executed: %s (alias: %s)\n" "$found_path" "$alias_def"
             ;;
         function)
-            printf "  → Executed: %s (function in %s:%s)\n" "$found_path" "$file" "$line"
+            printf "      → Executed: %s (function in %s:%s)\n" "$found_path" "$file" "$line"
             ;;
         builtin)
-            printf "  → Executed: %s (builtin)\n" "$found_path"
+            printf "      → Executed: %s (builtin)\n" "$found_path"
             ;;
         *)
             if [[ "$found_path" != "$canonical" ]]; then
-                printf "  → Executed: %s  -  symlink to [%s]\n" "$found_path" "$canonical"
+                printf "      → Executed: %s  -  symlink to [%s]\n" "$found_path" "$canonical"
             else
-                printf "  → Executed: %s\n" "$found_path"
+                printf "      → Executed: %s\n" "$found_path"
             fi
             ;;
     esac
 else
-    printf "  → Executed: not found\n"
+    printf "      → Executed: not found\n"
 fi
 
 # Kernel execution
 if (( path_winner )); then
-    printf "\nKernel execution target:\n"
+    printf "\n    Kernel execution target:\n"
     local canonical
     canonical=$(readlink -f -- "$found_path" 2>/dev/null || echo "$found_path")
     if [[ "$found_path" != "$canonical" ]]; then
-        printf "  ↳ symlink → %s\n" "$canonical"
+        printf "      ↳ symlink → %s\n" "$canonical"
     else
-        printf "  ↳ executable → %s\n" "$canonical"
+        printf "      ↳ executable → %s\n" "$canonical"
     fi
 
     # ELF interpreter
     if file "$canonical" 2>/dev/null | grep -q ELF; then
         local interp
         interp=$(readelf -l "$canonical" 2>/dev/null | awk '/interpreter/ {print $NF}')
-        [[ -n $interp ]] && printf "  ↳ ELF interpreter: %s\n" "$interp"
+        [[ -n $interp ]] && printf "      ↳ ELF interpreter: %s\n" "$interp"
     fi
 
     # Script shebang
     if head -1 "$canonical" 2>/dev/null | grep -q '^#!'; then
-        printf "  ↳ shebang: %s\n" "$(head -1 "$canonical" | cut -c3-)"
+        printf "      ↳ shebang: %s\n" "$(head -1 "$canonical" | cut -c3-)"
     fi
 fi
 

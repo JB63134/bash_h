@@ -26,19 +26,6 @@ Sourced file detection supports debian and fedora / rhel setups
 
 ---
 
-##  Features
-
-### Command Detection
-- Determines whether a command is:
-  - Alias
-  - Shell function
-  - Builtin
-  - Keyword
-  - External file/script
-- Provides context (e.g., file location, line number, symlink targets).
-
----
-
 ## Features
 
 ### Command Detection

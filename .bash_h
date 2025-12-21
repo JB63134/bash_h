@@ -890,7 +890,7 @@ _h_print_trace() {
     local cmd="$1"
     local path_winner=0
     local bash_winner_type=""
-    local kernel_target=""
+  #  local kernel_target=""
     local -a res
     local winner=""
     local found_path=""
@@ -942,7 +942,7 @@ _h_print_trace() {
     # 4. PATH
     printf "4 - \$PATH in order\n\n"
     for ((i=3; i<${#res[@]}; i++)); do
-        IFS='|' read -r kind dir state target <<< "${res[i]}"
+        IFS='|' read -r _ dir state target <<< "${res[i]}"
         case "$state" in
             notfound)
                 printf "              ↳ %-24s %s - not found\n" "$dir" "$cmd"
@@ -961,7 +961,7 @@ _h_print_trace() {
                     printf "              ↳ %-24s %s - symlink found [link to %s]\n" \
                         "$dir" "$cmd" "$target"
                     found_path="$dir/$cmd"
-                    kernel_target="$target"
+              #      kernel_target="$target"
                     [[ -z $bash_winner_type ]] && path_winner=1
                 else
                     printf "              ↳ %-24s %s - symlink found [shadowed]\n" "$dir" "$cmd"

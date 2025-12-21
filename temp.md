@@ -1,5 +1,31 @@
-- Shows command resolution order (alias → function → builtin → PATH).  
+# h — Bash Help Tool
+
+[![MIT License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![Version](https://img.shields.io/badge/version-3.0.38-blue)](https://github.com/JB63134/bash_h/releases)
+
+**h** is a full fledged command resolution engine that unifies help into one shortcut - **h**    
+It helps you understand what a command is, and shows available documentation.
+  
+**h** started out as an alias h='eval "$(history -p !! | awk '''{print $1}''')" --help'
+  
+I decided to write this version of **h** so that I could get help from multiple sources.  
+For binaries '<command> --help', -help, -h, or -?.  
+For builtins and some keywords use 'help "command"'  
+As a fallback, checks for both man pages and info pages then alerts the user if found        
+For aliases, functions and scripts - handle displaying contents.  
+
+## Requirements 
+
+Bash ≥ V4.4 and GNU utils    
+Sourced file detection supports debian and fedora / rhel setups 
+
+## Optional dependencies
+
+`fzf` -- for interactive search    
+`bat` / `batcat` -- for pretty syntax-highlighting. `h` will fallback to an internal perl script for basic highlighting 
+
 ---
+
 ##  Features
 
 ### Command Detection

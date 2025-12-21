@@ -24,27 +24,45 @@ Sourced file detection supports debian and fedora / rhel setups
 `fzf` -- for interactive search    
 `bat` / `batcat` -- for pretty syntax-highlighting. `h` will fallback to an internal perl script for basic highlighting 
 
+---
+
 ## Features
 
-* **Syntax-highlighting**:
-  
-  * 50 line preview of scripts and functions, can use `bat` as optional highlighter.
-* **Aliases and Functions**:
+### Command Resolution
+- Determines whether a command is:
+  - Alias
+  - Shell function
+  - Builtin
+  - Keyword
+  - External file/script
+- Provides context (e.g., file location, line number, symlink targets).
 
-  * show alias definition or function body
-  * location (file and line number, or interactive shell)
-* **Builtins and Keywords**:
+### Help Output
+- Shows help from:
+  - `help` for builtins/keywords
+  - `--help` / `-h` flags for external commands
+  - alerts user of `man` or `info` pages if available
 
-  * Display help output - 'help 'command''
-  * Internal Descriptions for Edge cases missing help output  
-* Inspect **External Binaries**:
+### Script/Function Preview
+- Displays the first 50 lines
+- Syntax highlighting:
+  - Prefers `bat` / `batcat` if installed
+  - Otherwise uses embedded Perl for colorized Bash syntax
 
-  * Displays the full resolved path and alerts you of symlinks
-  * Display help output by iterating through common flags
-  * Tries --help -help -h and -?
-* **Interactive search**: using `fzf` for commands (optional)
-* Supports TAB completion
-* Pretty-printed, colorized output (uses `tput` or ANSI colors)
+### Alias Expansion
+- Resolves aliases  
+- Shows where aliases are defined (interactive shell or sourced file)
+
+### Command Resolution Trace
+- `h --trace sed` shows the order Bash would resolve a command  
+- Highlights shadowing (e.g., alias overriding a builtin)
+
+### Interactive Command Selection
+- If `fzf` is installed, `h -f` lets users pick a command interactively
+
+### Command Resolution Trace
+- `_h_print_trace` shows the order Bash would resolve a command  
+- Highlights shadowing (e.g., alias overriding a builtin)
 
 ---
 
@@ -62,10 +80,14 @@ source /path/to/.bash_h
 ## Usage
 
 ```bash
-h [command]
+h                   # Analyze the last executed command
+h ls                # Show detailed info about 'ls'
+h awk               # Show help, location, and script preview if available
+h -f                # Use fzf to select a command interactively
+h -t awk            # Shows command resolution order (alias → function → builtin → PATH).  
+h -h                # Show usage
+h -v                # Show version info
 ```
-
-If no command is provided, `h` will analyze your **most recent command**.
 
 ### Options
 
@@ -87,3 +109,5 @@ If no command is provided, `h` will analyze your **most recent command**.
 ![Script](images/script.png)
 
 --------------------------------------------------------------------------------------------
+
+

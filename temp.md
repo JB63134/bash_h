@@ -1,13 +1,19 @@
-# Bash Help Tool (`h`) Overview
-
-## 1. Purpose
-
-
 - Shows command resolution order (alias → function → builtin → PATH).  
+---
+##  Features
+
+### Command Detection
+- Determines whether a command is:
+  - Alias
+  - Shell function
+  - Builtin
+  - Keyword
+  - External file/script
+- Provides context (e.g., file location, line number, symlink targets).
 
 ---
 
-## 2. Core Features
+## Features
 
 ### Command Detection
 - Determines whether a command is:
@@ -38,44 +44,12 @@
 - `_h_print_trace` shows the order Bash would resolve a command  
 - Highlights shadowing (e.g., alias overriding a builtin)
 
-### Dependency Checking
-- Required: `grep`, `basename`, `file`, `find`, `sed`, `cut`, `head`, `readlink`, `realpath`, `perl`  
-- Optional: `tput`, `fzf`, `bat`, `batcat`  
-- Warns or exits if required dependencies are missing
-
-### Sourcing Tree Analysis
-- `_h_sourcedtree` recursively detects sourced files from `.bashrc`, `.bash_profile`, `/etc/profile.d`, etc.  
-- Handles `source`, `.`, conditional sourcing, array sourcing safely (no arbitrary `eval`)
-
 ### Interactive Command Selection
 - If `fzf` is installed, `h -f` lets users pick a command interactively
 
-### Color Support
-- Detects terminal capabilities via `tput`  
-- ANSI color codes used for highlighting output categories: keywords, builtins, aliases, files, scripts, variables, numbers, comments, etc.
----
-
-## Features
-
-* **Syntax-highlighting**:
-  
-  * 50 line preview of scripts and functions, can use `bat` as optional highlighter.
-* **Aliases and Functions**:
-
-  * show alias definition or function body
-  * location (file and line number, or interactive shell)
-* **Builtins and Keywords**:
-
-  * Display help output - 'help 'command''
-  * Internal Descriptions for Edge cases missing help output  
-* Inspect **External Binaries**:
-
-  * Displays the full resolved path and alerts you of symlinks
-  * Display help output by iterating through common flags
-  * Tries --help -help -h and -?
-* **Interactive search**: using `fzf` for commands (optional)
-* Supports TAB completion
-* Pretty-printed, colorized output (uses `tput` or ANSI colors)
+### Command Resolution Trace
+- `_h_print_trace` shows the order Bash would resolve a command  
+- Highlights shadowing (e.g., alias overriding a builtin)
 
 ---
 
@@ -101,8 +75,6 @@ h -t awk            # Shows command resolution order (alias → function → bui
 h -h                # Show usage
 h -v                # Show version info
 ```
-
-If no command is provided, `h` will analyze your **most recent command**.
 
 ### Options
 

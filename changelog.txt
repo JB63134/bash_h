@@ -2,6 +2,7 @@ V3.0.45
      new Command Resolution Trace
      shows the order Bash would resolve a command
      Highlights shadowing (e.g., alias overriding a builtin)
+     UI needs a lot of cleanup, but it works and im tired.
 
      try h --trace awk
 

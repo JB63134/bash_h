@@ -28,7 +28,7 @@ Sourced file detection supports debian and fedora / rhel setups
 
 ## Features
 
-### Command Detection
+### Command Resolution
 - Determines whether a command is:
   - Alias
   - Shell function
@@ -41,7 +41,7 @@ Sourced file detection supports debian and fedora / rhel setups
 - Shows help from:
   - `help` for builtins/keywords
   - `--help` / `-h` flags for external commands
-  - `man` or `info` pages if available
+  - alerts user of `man` or `info` pages if available
 
 ### Script/Function Preview
 - Displays the first 50 lines
@@ -50,11 +50,11 @@ Sourced file detection supports debian and fedora / rhel setups
   - Otherwise uses embedded Perl for colorized Bash syntax
 
 ### Alias Expansion
-- Resolves aliases and expands variables like `$HOME`, `$USER`  
+- Resolves aliases  
 - Shows where aliases are defined (interactive shell or sourced file)
 
 ### Command Resolution Trace
-- `_h_print_trace` shows the order Bash would resolve a command  
+- `h --trace sed` shows the order Bash would resolve a command  
 - Highlights shadowing (e.g., alias overriding a builtin)
 
 ### Interactive Command Selection

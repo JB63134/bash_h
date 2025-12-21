@@ -74,7 +74,7 @@ If no command is provided, `h` will analyze your **most recent command**.
 | `-h`, `--help`       | Show help text                                                     |
 | `-v`, `--version`    | Show version information                                           |
 | `-f`, `--fzf`        | Interactively search for commands (requires `fzf`)                 |
-
+| `-t`, `--trace`      | Show detailed trace of command resolution                          |
 
 ---
 

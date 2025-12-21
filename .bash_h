@@ -430,7 +430,7 @@ EOF
 _h_ver() {
     cat <<'EOF'
 
-     h v3.0.45 — Bash help tool  
+     h v3.0.47 — Bash help tool  
      Author : John Blair
           
      MIT License
@@ -927,7 +927,7 @@ _h_print_trace() {
     printf "    ⎟   \n"
     
     # 3. Builtin
-    printf "    ├─ Builtin/Keyword?\n"
+    printf "    ├─ Builtin?\n"
     if [[ ${res[2]} == builtin\|found ]]; then
         if [[ -z $winner ]]; then
             printf "    ⎟    ↳ %s - enabled\n" "$cmd"
@@ -943,10 +943,25 @@ _h_print_trace() {
     fi
     printf "    ⎟   \n"
     
-    # 4. PATH
+    # 4. Keyword
+printf "    ├─ Keyword?\n"
+if [[ ${res[3]} == keyword\|found ]]; then
+    if [[ -z $winner ]]; then
+        printf "    ⎟    ↳ %s - enabled\n" "$cmd"
+        winner="keyword"
+        bash_winner_type="keyword"
+        [[ -z $found_path ]] && found_path="$cmd"
+    else
+        printf "    ⎟    ↳ %s - enabled [shadowed]\n" "$cmd"
+    fi
+else
+    printf "    ⎟    ↳ %s - not found\n" "$cmd"
+fi
+printf "    ⎟   \n"
+
+    # 5. PATH
     printf "    ├─ \$PATH in order\n"
-    printf "    ⎟   \n"
-    for ((i=3; i<${#res[@]}; i++)); do
+    for ((i=4; i<${#res[@]}; i++)); do
         IFS='|' read -r kind dir state target <<< "${res[i]}"
         case "$state" in
             notfound)
@@ -973,59 +988,62 @@ _h_print_trace() {
                 ;;
         esac
     done
-            printf "    └──────────────────────────────────────────\n\n" "$CA_INDENT"
+    printf "    ⎟ \n"
 # Bash resolution target
-printf "\n    Bash resolution target:\n"
+printf "    ├─ Bash resolution target:\n"
 if [[ -n $found_path ]]; then
     local canonical
     canonical=$(readlink -f -- "$found_path" 2>/dev/null || echo "$found_path")
     case "$bash_winner_type" in
         alias)
-            printf "      → Executed: %s (alias: %s)\n" "$found_path" "$alias_def"
+            printf "    ⎟    ↳ Executed: %s (alias: %s)\n" "$found_path" "$alias_def"
             ;;
         function)
-            printf "      → Executed: %s (function in %s:%s)\n" "$found_path" "$file" "$line"
+            printf "    ⎟    ↳ Executed: %s (function in %s:%s)\n" "$found_path" "$file" "$line"
             ;;
         builtin)
-            printf "      → Executed: %s (builtin)\n" "$found_path"
+            printf "    ⎟    ↳ Executed: %s (builtin)\n" "$found_path"
             ;;
         *)
             if [[ "$found_path" != "$canonical" ]]; then
-                printf "      → Executed: %s  -  symlink to [%s]\n" "$found_path" "$canonical"
+                printf "    ⎟    ↳ Executed: %s  -  symlink to [%s]\n" "$found_path" "$canonical"
             else
-                printf "      → Executed: %s\n" "$found_path"
+                printf "    ⎟    ↳ Executed: %s\n" "$found_path"
             fi
             ;;
     esac
 else
-    printf "      → Executed: not found\n"
+    printf "    ⎟    ↳ Executed: not found\n"
 fi
-
+printf "    ⎟ \n"
 # Kernel execution
 if (( path_winner )); then
-    printf "\n    Kernel execution target:\n"
+
+    printf "    ├─ Kernel execution target:\n"
+
     local canonical
     canonical=$(readlink -f -- "$found_path" 2>/dev/null || echo "$found_path")
     if [[ "$found_path" != "$canonical" ]]; then
-        printf "      ↳ symlink → %s\n" "$canonical"
+        printf "    ⎟    ↳ symlink → %s\n" "$canonical"
     else
-        printf "      ↳ executable → %s\n" "$canonical"
+        printf "    ⎟    ↳ executable → %s\n" "$canonical"
     fi
 
     # ELF interpreter
     if file "$canonical" 2>/dev/null | grep -q ELF; then
         local interp
         interp=$(readelf -l "$canonical" 2>/dev/null | awk '/interpreter/ {print $NF}')
-        [[ -n $interp ]] && printf "      ↳ ELF interpreter: %s\n" "$interp"
+        [[ -n $interp ]] && printf "    ⎟    ↳ ELF interpreter: %s\n" "$interp"
     fi
 
     # Script shebang
     if head -1 "$canonical" 2>/dev/null | grep -q '^#!'; then
-        printf "      ↳ shebang: %s\n" "$(head -1 "$canonical" | cut -c3-)"
+        printf "    ⎟    ↳ shebang: %s\n" "$(head -1 "$canonical" | cut -c3-)"
     fi
 fi
+printf "    ⎟ \n"
+    printf "    └──────────────────────────────────────────\n" "$CA_INDENT"
 
-    printf "\n"
 }
 
 #---------------------
@@ -1057,12 +1075,18 @@ _h_resolve_command() {
     fi
 
     # Builtin
-if [[ $(type -t "$cmd") =~ ^(builtin|keyword)$ ]]; then
+if compgen -b | grep -qx "$cmd"; then
     out_ref+=("builtin|found")
 else
     out_ref+=("builtin|notfound")
 fi
 
+# Keyword
+if compgen -k | grep -qx "$cmd"; then
+    out_ref+=("keyword|found")
+else
+    out_ref+=("keyword|notfound")
+fi
 
     # PATH
     IFS=: read -ra dirs <<< "$PATH"
@@ -1078,36 +1102,6 @@ fi
             out_ref+=("path|$d|notfound")
         fi
     done
-}
-
-#---------------------
-# Kernel execution inspection
-_h_print_kernel_target() {
-    local bash_path="$1"
-    [[ -z $bash_path || ! -e $bash_path ]] && return
-
-    local real
-    real=$(readlink -f -- "$bash_path" 2>/dev/null) || return
-
-    printf "\nKernel execution target:\n"
-
-    if [[ -L $bash_path ]]; then
-        printf "  ↳ symlink → %s\n" "$real"
-    else
-        printf "  ↳ executable → %s\n" "$real"
-    fi
-
-    # ELF interpreter
-    if file "$real" 2>/dev/null | grep -q ELF; then
-        local interp
-        interp=$(readelf -l "$real" 2>/dev/null | awk '/interpreter/ {print $NF}')
-        [[ -n $interp ]] && printf "  ↳ ELF interpreter: %s\n" "$interp"
-        return
-    fi
-    # Script shebang
-    if head -1 "$real" 2>/dev/null | grep -q '^#!'; then
-        printf "  ↳ shebang: %s\n" "$(head -1 "$real" | cut -c3-)"
-    fi
 }
 
 #------------------------------------------------------------------------

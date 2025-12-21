@@ -53,54 +53,7 @@
 ### Color Support
 - Detects terminal capabilities via `tput`  
 - ANSI color codes used for highlighting output categories: keywords, builtins, aliases, files, scripts, variables, numbers, comments, etc.
-
 ---
-
-## 3. Usage Examples
-
-```bash
-h                   # Analyze the last executed command
-h ls                # Show detailed info about 'ls'
-h awk               # Show help, location, and script preview if available
-h -f                # Use fzf to select a command interactively
-h -t awk            # Show detailed trace of command resolution
-h -h                # Show usage
-h -v                # Show version info
-
-
-
----
-
----
-
-
-
-
-# h — Bash Help Tool
-
-[![MIT License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![Version](https://img.shields.io/badge/version-3.0.38-blue)](https://github.com/JB63134/bash_h/releases)
-
-**h** is a full fledged command resolution engine that unifies help into one shortcut - **h**    
-It helps you understand what a command is, and shows available documentation.
-  
-**h** started out as an alias h='eval "$(history -p !! | awk '''{print $1}''')" --help'
-  
-I decided to write this version of **h** so that I could get help from multiple sources.  
-For binaries '<command> --help', -help, -h, or -?.  
-For builtins and some keywords use 'help "command"'  
-As a fallback, checks for both man pages and info pages then alerts the user if found        
-For aliases, functions and scripts - handle displaying contents.  
-
-## Requirements 
-
-Bash ≥ V4.4 and GNU utils    
-Sourced file detection supports debian and fedora / rhel setups 
-
-## Optional dependencies
-
-`fzf` -- for interactive search    
-`bat` / `batcat` -- for pretty syntax-highlighting. `h` will fallback to an internal perl script for basic highlighting 
 
 ## Features
 
@@ -140,7 +93,13 @@ source /path/to/.bash_h
 ## Usage
 
 ```bash
-h [command]
+h                   # Analyze the last executed command
+h ls                # Show detailed info about 'ls'
+h awk               # Show help, location, and script preview if available
+h -f                # Use fzf to select a command interactively
+h -t awk            # Shows command resolution order (alias → function → builtin → PATH).  
+h -h                # Show usage
+h -v                # Show version info
 ```
 
 If no command is provided, `h` will analyze your **most recent command**.

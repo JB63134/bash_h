@@ -133,6 +133,7 @@ h() {
     case "$cmd" in
         -h|--help) _h_usage; return 0;;
         -v|--version) _h_ver; return 0;;
+        -t|--trace) shift; cmd="$1"; _h_print_trace "$cmd"; return 0;;
         -f|--fzf)
             if (( fzffound == 1 )); then 
                 local pick
@@ -267,7 +268,7 @@ fi
         raw=$(alias "$cmd")
         alias_expansion=${raw#*=}         # remove 'name='
         alias_expansion=${alias_expansion:1:${#alias_expansion}-2}   # trim outer quotes
-        alias_expansion=$(_ca_expand_vars "$alias_expansion")
+        alias_expansion=$(_h_expand_vars "$alias_expansion")
         alias_def=$(alias "$cmd")
         
         printf "%s├─ ${CYAN}'%s' ${RESET}is an alias:\n" "$indent" "$cmd"
@@ -368,7 +369,7 @@ fi
         for flag in "${help_flags[@]}"; do
             output="$("$cmd_path" "$flag" 2>&1 || true)"
 
-            if [[ -n "$output" ]] && is_help_output "$output"; then
+            if [[ -n "$output" ]] && _h_is_help_output "$output"; then
                 printf "%s    ↳ Showing${CYAN} '%s %s'${RESET}:\n\n" "$indent" "$cmdname" "$flag"
                 printf "%s\n\n" "$output" | sed "s/^/$indent         /"
                 output_shown=1
@@ -426,7 +427,7 @@ EOF
 _h_ver() {
     cat <<'EOF'
 
-     h v3.0.38 — Bash help tool  
+     h v3.0.45 — Bash help tool  
      Author : John Blair
           
      MIT License
@@ -455,10 +456,10 @@ EOF
 }
 
 #------------------------------------------------------------------------
-# Function: is_help_output
+# Function: _h_is_help_output
 # Purpose: check output to identify binaries that still show help with non zero exit codes
 #------------------------------------------------------------------------
-is_help_output() {
+_h_is_help_output() {
     local text="$1"
     # Rule 1: starts with "Usage:"
     [[ $text =~ ^Usage: ]] && return 0
@@ -484,38 +485,30 @@ _h_add_admin_paths() {
     fi
 
     local admin_dirs=(
-            "$HOME/.local/bin"
-            "$HOME/bin/scripts"
-            "$HOME/bin"
-            "$HOME/.cargo/bin"
-            "$HOME/.npm-global/bin"
-            "$HOME/.local/share/bash-completion/bin"
-            "$BASH_ENV"
-            "$CONDA_PREFIX/bin"
-            "/flatpak/bin"         
-            "/snap/bin"
-            "/usr/local/bin"
-            "/usr/local/sbin"
-            "/usr/local/games"
-            "/usr/bin"
-            "/usr/sbin"        
-            "/usr/games"
-            "/bin"
-            "/sbin"  
-            "/opt/bin"
-            "/opt/sbin"         
-            )
-            
-    # Add admin dirs to PATH if missing
+        "$HOME/bin"
+        "$HOME/bin/scripts"
+        "$HOME/.local/bin"
+        "$HOME/.cargo/bin"
+        "$HOME/.npm-global/bin"
+        "$HOME/.local/share/bash-completion/bin"
+        "$CONDA_PREFIX/bin"
+        "/flatpak/bin"
+        "/snap/bin"
+        "/usr/local/bin"
+        "/usr/local/sbin"
+        "/usr/local/games"
+        "/usr/bin"
+        "/usr/sbin"
+        "/usr/games"
+        "/bin"
+        "/sbin"
+        "/opt/bin"
+        "/opt/sbin"
+    )
+        
     for dir in "${admin_dirs[@]}"; do
-        if [[ -d "$dir" && ":$PATH:" != *":$dir:"* ]]; then
-            PATH="$PATH:$dir"
-        fi
+        [[ -d "$dir" && ":$PATH:" != *":$dir:"* ]] && PATH="$dir:$PATH"
     done
-    
-    while IFS= read -r d; do
-        [[ -d "$d" && ":$PATH:" != *":$d:"* ]] && PATH="$PATH:$d"
-    done < <(find "$HOME/.local/bin" -type d 2>/dev/null)
 }
 
 #------------------------------------------------------------------------
@@ -886,6 +879,231 @@ _h_check_dependencies() {
         fi
     fi
     return 0
+}
+
+#------------------------------------------------------------------------
+# Function: _h_print_trace
+# Purpose: Command Resolution Trace (aliases, functions, builtins, PATH)
+#------------------------------------------------------------------------
+_h_print_trace() {
+ #   _h_restore_path
+    local cmd="$1"
+    local path_winner=0
+    local bash_winner_type=""
+    local kernel_target=""
+    local -a res
+    local winner=""
+    local found_path=""
+    local alias_def="" file line
+
+    _h_resolve_command "$cmd" res
+
+    printf "\n%s\n\nResolution order:\n\n" "$cmd"
+
+    # 1. Alias
+    printf "1 - alias\n\n"
+    if [[ ${res[0]} == alias\|found* ]]; then
+        alias_def="${res[0]#*|found|}"
+        printf "    %s - found → %s\n\n" "$cmd" "$alias_def"
+        winner="alias"
+        bash_winner_type="alias"
+        found_path="$cmd"
+    else
+        printf "    %s - not found\n\n" "$cmd"
+    fi
+
+    # 2. Function
+    printf "2 - function\n\n"
+    if [[ ${res[1]} == function\|found* ]]; then
+        IFS='|' read -r _ _ file line <<< "${res[1]}"
+        printf "    %s - defined in %s:%s\n\n" "$cmd" "$file" "$line"
+        [[ -z $winner ]] && winner="function" && bash_winner_type="function"
+        [[ -z $found_path ]] && found_path="$cmd"
+    else
+        printf "    %s - not found\n\n" "$cmd"
+    fi
+
+    # 3. Builtin
+    printf "3 - builtin\n\n"
+    if [[ ${res[2]} == builtin\|found ]]; then
+        if [[ -z $winner ]]; then
+            printf "    %s - enabled\n\n" "$cmd"
+            winner="builtin"
+            bash_winner_type="builtin"
+            [[ -z $found_path ]] && found_path="$cmd"
+        else
+            # builtin shadowed by alias or function
+            printf "    %s - enabled [shadowed]\n\n" "$cmd"
+        fi
+    else
+        printf "    %s - not found\n\n" "$cmd"
+    fi
+
+    # 4. PATH
+    printf "4 - \$PATH in order\n\n"
+    for ((i=3; i<${#res[@]}; i++)); do
+        IFS='|' read -r kind dir state target <<< "${res[i]}"
+        case "$state" in
+            notfound)
+                printf "              ↳ %-24s %s - not found\n" "$dir" "$cmd"
+                ;;
+            file)
+                if [[ -z $found_path ]]; then
+                    printf "              ↳ %-24s %s - found\n" "$dir" "$cmd"
+                    found_path="$dir/$cmd"
+                    [[ -z $bash_winner_type ]] && path_winner=1
+                else
+                    printf "              ↳ %-24s %s - found [shadowed]\n" "$dir" "$cmd"
+                fi
+                ;;
+            symlink)
+                if [[ -z $found_path ]]; then
+                    printf "              ↳ %-24s %s - symlink found [link to %s]\n" \
+                        "$dir" "$cmd" "$target"
+                    found_path="$dir/$cmd"
+                    kernel_target="$target"
+                    [[ -z $bash_winner_type ]] && path_winner=1
+                else
+                    printf "              ↳ %-24s %s - symlink found [shadowed]\n" "$dir" "$cmd"
+                fi
+                ;;
+        esac
+    done
+
+# Bash resolution target
+printf "\nBash resolution target:\n"
+if [[ -n $found_path ]]; then
+    local canonical
+    canonical=$(readlink -f -- "$found_path" 2>/dev/null || echo "$found_path")
+    case "$bash_winner_type" in
+        alias)
+            printf "  → Executed: %s (alias: %s)\n" "$found_path" "$alias_def"
+            ;;
+        function)
+            printf "  → Executed: %s (function in %s:%s)\n" "$found_path" "$file" "$line"
+            ;;
+        builtin)
+            printf "  → Executed: %s (builtin)\n" "$found_path"
+            ;;
+        *)
+            if [[ "$found_path" != "$canonical" ]]; then
+                printf "  → Executed: %s  -  symlink to [%s]\n" "$found_path" "$canonical"
+            else
+                printf "  → Executed: %s\n" "$found_path"
+            fi
+            ;;
+    esac
+else
+    printf "  → Executed: not found\n"
+fi
+
+# Kernel execution
+if (( path_winner )); then
+    printf "\nKernel execution target:\n"
+    local canonical
+    canonical=$(readlink -f -- "$found_path" 2>/dev/null || echo "$found_path")
+    if [[ "$found_path" != "$canonical" ]]; then
+        printf "  ↳ symlink → %s\n" "$canonical"
+    else
+        printf "  ↳ executable → %s\n" "$canonical"
+    fi
+
+    # ELF interpreter
+    if file "$canonical" 2>/dev/null | grep -q ELF; then
+        local interp
+        interp=$(readelf -l "$canonical" 2>/dev/null | awk '/interpreter/ {print $NF}')
+        [[ -n $interp ]] && printf "  ↳ ELF interpreter: %s\n" "$interp"
+    fi
+
+    # Script shebang
+    if head -1 "$canonical" 2>/dev/null | grep -q '^#!'; then
+        printf "  ↳ shebang: %s\n" "$(head -1 "$canonical" | cut -c3-)"
+    fi
+fi
+
+    printf "\n"
+}
+
+#---------------------
+# Helper function: resolve command
+_h_resolve_command() {
+    local cmd="$1"
+    local -n out_ref="$2"
+    out_ref=()
+
+    local type_kind
+    type_kind=$(type -t "$cmd" 2>/dev/null)
+
+    # Alias
+    if [[ "$type_kind" == "alias" ]]; then
+        out_ref+=("alias|found|$(alias "$cmd")")
+    else
+        out_ref+=("alias|notfound")
+    fi
+
+    # Function
+    if [[ "$type_kind" == "function" ]]; then
+        local was_extdebug=0 line file
+        shopt -q extdebug || { shopt -s extdebug; was_extdebug=1; }
+        read -r _ line file <<< "$(declare -F "$cmd")"
+        (( was_extdebug )) && shopt -u extdebug
+        out_ref+=("function|found|$file|$line")
+    else
+        out_ref+=("function|notfound")
+    fi
+
+    # Builtin
+if [[ $(type -t "$cmd") =~ ^(builtin|keyword)$ ]]; then
+    out_ref+=("builtin|found")
+else
+    out_ref+=("builtin|notfound")
+fi
+
+
+    # PATH
+    IFS=: read -ra dirs <<< "$PATH"
+    for d in "${dirs[@]}"; do
+        local p="$d/$cmd"
+        if [[ -x "$p" ]]; then
+            if [[ -L "$p" ]]; then
+                out_ref+=("path|$d|symlink|$(readlink -f "$p")")
+            else
+                out_ref+=("path|$d|file")
+            fi
+        else
+            out_ref+=("path|$d|notfound")
+        fi
+    done
+}
+
+#---------------------
+# Kernel execution inspection
+_h_print_kernel_target() {
+    local bash_path="$1"
+    [[ -z $bash_path || ! -e $bash_path ]] && return
+
+    local real
+    real=$(readlink -f -- "$bash_path" 2>/dev/null) || return
+
+    printf "\nKernel execution target:\n"
+
+    if [[ -L $bash_path ]]; then
+        printf "  ↳ symlink → %s\n" "$real"
+    else
+        printf "  ↳ executable → %s\n" "$real"
+    fi
+
+    # ELF interpreter
+    if file "$real" 2>/dev/null | grep -q ELF; then
+        local interp
+        interp=$(readelf -l "$real" 2>/dev/null | awk '/interpreter/ {print $NF}')
+        [[ -n $interp ]] && printf "  ↳ ELF interpreter: %s\n" "$interp"
+        return
+    fi
+    # Script shebang
+    if head -1 "$real" 2>/dev/null | grep -q '^#!'; then
+        printf "  ↳ shebang: %s\n" "$(head -1 "$real" | cut -c3-)"
+    fi
 }
 
 #------------------------------------------------------------------------

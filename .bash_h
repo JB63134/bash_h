@@ -412,7 +412,7 @@ _h_usage() {
      Examples:
            h                   # Get help for your most recent command
            h awk               # Get help for 'awk'
-           h -t awk            # What runs and why?
+           h -t awk            # Which awk runs and why that one?
  
      Features:
        • Shows --help/-help/-h/-? output or points to man/info pages

@@ -96,7 +96,7 @@ h -v                # Show version info
 | `-h`, `--help`       | Show help text                                                     |
 | `-v`, `--version`    | Show version information                                           |
 | `-f`, `--fzf`        | Interactively search for commands (requires `fzf`)                 |
-| `-t`, `--trace`      | Show detailed trace of command resolution                          |
+| `-t`, `--trace`      | Show detailed trace of command resolution including shadowing      |
 
 ---
 

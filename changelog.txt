@@ -1,3 +1,8 @@
+V3.0.51
+     UI/UX stuff.
+     fixed bug in trace mode, shadowed functions are now reliably found
+     fixed bug in depth count for recursion control
+
 V3.0.47
      UI/UX stuff.
      fixed bug in trace mode, shadowed builtins are now reliably found

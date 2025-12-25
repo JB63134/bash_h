@@ -446,7 +446,7 @@ EOF
 _h_ver() {
     cat <<'EOF'
 
-     h v3.0.51 — Bash help tool  
+     h v3.0.52 — Bash help tool  
      Author : John Blair
           
      MIT License
@@ -915,7 +915,8 @@ _h_print_trace() {
 
     _h_resolve_command "$cmd" res
 
-    printf "\n      %s -- command resolution order:\n\n" "$cmd"
+    printf "\n    ├─ ${CYAN}%s${RESET} -- command resolution order:\n" "$cmd"
+    printf "    ⎟\n" 
 
     # 1. Alias
     printf "    ├─ Alias?\n"

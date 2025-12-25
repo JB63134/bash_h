@@ -1,3 +1,6 @@
+V3.0.52
+     ui/ux minor stuff, just keeping up with ca
+
 V3.0.51
      UI/UX stuff.
      fixed bug in trace mode, shadowed functions are now reliably found

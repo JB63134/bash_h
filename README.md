@@ -95,7 +95,7 @@ wget https://github.com/JB63134/bash_h/releases/latest/download/h_3.0.52.deb
 sudo dpkg -i h_3.0.52.deb
 
 # Verify installation
-ca -h
+h -h
 ```
 
 ---

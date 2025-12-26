@@ -68,11 +68,34 @@ Sourced file detection supports debian and fedora / rhel setups
 
 ## Installation
 
-Clone the repository and source the script in your `.bashrc` or `.bash_profile`:
+### 1. Manual Installation
+
+Clone the repository.
+```bash
+# Clone the repository.
+git clone https://github.com/JB63134/bash_h.git /usr/local/bin/bash_h
+
+# Source the main script in your .bashrc or .bash_profile
+echo "source /usr/local/bin/bash_h/.bash_h" >> ~/.bashrc
+
+# Apply changes immediately
+source ~/.bashrc
+```
+
+
+### 2. Debian/Ubuntu `.deb` Package
+
+A quick method for Debian-based systems:
 
 ```bash
-git clone https://github.com/JB63134/bash_h.git
-source /path/to/.bash_h
+# Download the latest release
+wget https://github.com/JB63134/bash_h/releases/latest/download/h_3.0.52.deb
+
+# Install using dpkg
+sudo dpkg -i h_3.0.52.deb
+
+# Verify installation
+ca -h
 ```
 
 ---

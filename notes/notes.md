@@ -5,11 +5,9 @@ but
 Bash’s help performs prefix matching, so help pop resolves to popd.    
 ---
 
-does fedora duplicate every binary in the file system? mixing sbin with bin?   
-
-debian, it's root only, sbin.  
-
-fedora,  well,  
+h fstrim
+On debian, it's root only, sbin.  
+On fedora,  well,  does fedora duplicate every binary in the file system? mixing sbin with bin?   
     \u251c\u2500 fstrim -- command resolution order:
     \u239f
     \u251c\u2500 Alias?

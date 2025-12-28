@@ -41,3 +41,8 @@ On fedora,  well,  does fedora duplicate every binary in the file system? mixing
     \u239f    \u21b3 Symlink \u2192 /usr/bin/fstrim
     \u239f    \u21b3 ELF interpreter: /lib64/ld-linux-x86-64.so.2
 
+    do i need to detect os and change path setup for fedora in the trace? that would get the actual user path...  
+    i need to learn a bit about fedora.
+
+    
+

@@ -1,5 +1,9 @@
 # `bash_h` Changelog
 
+## V3.0.55
+- ui/ux stuff
+- testing on fedora - path manipulation bug fixed
+
 ## V3.0.52
 - Minor UI/UX updates to keep consistent with `bash_ca`
 

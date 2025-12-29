@@ -526,7 +526,7 @@ _h_add_admin_paths() {
     )
         
     for dir in "${admin_dirs[@]}"; do
-        [[ -d "$dir" && ":$PATH:" != *":$dir:"* ]] && PATH="$dir:$PATH"
+        [[ -d "$dir" && ":$PATH:" != *":$dir:"* ]] && PATH="$PATH:$dir"
     done
 }
 
@@ -1099,17 +1099,17 @@ printf "    ⎟ \n"
 # Helper function: resolve command
 _h_resolve_command() {
     local cmd="$1"
-    local -n out_ref="$2"
-    out_ref=()
+    local -n out_refh="$2"
+    out_refh=()
 
     local type_kind
     type_kind=$(type -t "$cmd" 2>/dev/null)
 
     # Alias
     if [[ "$type_kind" == "alias" ]]; then
-        out_ref+=("alias|found|$(alias "$cmd")")
+        out_refh+=("alias|found|$(alias "$cmd")")
     else
-        out_ref+=("alias|notfound")
+        out_refh+=("alias|notfound")
     fi
 
     # Function
@@ -1119,23 +1119,23 @@ if declare -F "$cmd" &>/dev/null; then
     read -r _ line file <<< "$(declare -F "$cmd")"
     (( was_extdebug )) && shopt -u extdebug
     [[ -z $file ]] && file="interactive shell"
-    out_ref+=("function|found|$file|$line")
+    out_refh+=("function|found|$file|$line")
 else
-    out_ref+=("function|notfound")
+    out_refh+=("function|notfound")
 fi
 
     # Builtin
 if compgen -b | grep -qx "$cmd"; then
-    out_ref+=("builtin|found")
+    out_refh+=("builtin|found")
 else
-    out_ref+=("builtin|notfound")
+    out_refh+=("builtin|notfound")
 fi
 
 # Keyword
 if compgen -k | grep -qx "$cmd"; then
-    out_ref+=("keyword|found")
+    out_refh+=("keyword|found")
 else
-    out_ref+=("keyword|notfound")
+    out_refh+=("keyword|notfound")
 fi
 
     # PATH
@@ -1144,12 +1144,12 @@ fi
         local p="$d/$cmd"
         if [[ -x "$p" ]]; then
             if [[ -L "$p" ]]; then
-                out_ref+=("path|$d|symlink|$(readlink -f "$p")")
+                out_refh+=("path|$d|symlink|$(readlink -f "$p")")
             else
-                out_ref+=("path|$d|file")
+                out_refh+=("path|$d|file")
             fi
         else
-            out_ref+=("path|$d|notfound")
+            out_refh+=("path|$d|notfound")
         fi
     done
 }

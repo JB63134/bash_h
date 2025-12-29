@@ -97,7 +97,7 @@ sudo dpkg -i h_3.0.55.deb
 # Verify installation
 h -h
 ```
-### 2. Fedora `.rpm` Package
+### 3. Fedora `.rpm` Package
 
 A quick method for RHEL-based systems:
 

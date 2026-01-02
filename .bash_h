@@ -1,127 +1,40 @@
 #!/usr/bin/env bash
-#------------------------------------------------------------------------
-# h.sh  aka .bash_h
+#========================================================================
 # Main Function: h
-# Purpose: bash help tool give the user some idea of 
-#          whats happening for any command they run.
-#------------------------------------------------------------------------
-# If not running interactively, don't do anything
-case $- in
-    *i*) ;;
-      *) return;;
-esac
-
+# Purpose: bash help tool
+#========================================================================
+__H_version="3.1.0"
+__H_extglob_was=0
+__H_RHEL_like=0
+__H_OLD_PATH="$PATH"
 # shellcheck disable=SC2034
-h_needed_deps=(grep basename file find sed cut head readlink realpath perl)
+__H_needed_deps=(grep basename file find sed cut head readlink realpath perl)
 # shellcheck disable=SC2034
-h_optional_deps=(tput fzf batcat bat)
+__H_optional_deps=(tput fzf batcat bat)
 
-MAX_DEPTH=4
-OLD_PATH="$PATH"
-
-declare -g __H_SOURCED_SCANNED=0
 declare -gA __H_SOURCED_FILES_MAP=()   
 declare -ga __H_SOURCED_FILES_LIST=() 
-declare -gA __H_SEEN_ALIASES=()
-declare -gA __H_SEEN_COMMANDS=()
-declare -gA __H_SEEN_BUILTINS=()
-declare -gA __H_SHADOW_SEEN=()
-declare -gA __H_VISITED=()      
-complete -F _h_completion h
+
+complete -F _h_completion h 
 
 h() {
-    # -------------------------
-    # LOCAL Variables
-    # -------------------------
-    local fcmd cmd ctype cmd_path alias_expansion RED GREEN CYAN RESET indent
-    local depth=${2:-0}
+    # If not running interactively, don't do anything
+    case $- in
+        *i*) ;;
+        *) return;;
+    esac
     
-    depth=${2:-0}                # default to 0 if not provided
-    
-    if ! [[ "$depth" =~ ^[0-9]+$ ]]; then
-        depth=0
-    fi
-    
-    indent=$(printf "%*s" $((depth * 4)) "")
-    
-    
-    
-    # -------------------------
-    # Colors (tput → ANSI → none)
-    # -------------------------
-    if command -v tput &>/dev/null && [[ $(tput colors 2>/dev/null) -ge 8 ]]; then
-        # Preferred: tput colors
-        RED=$(tput setaf 1)
-        GREEN=$(tput setaf 2)
-        CYAN=$(tput setaf 6)
-        YELLOW=$(tput setaf 11)
-        BPURP=$(tput setaf 13)
-        GREY=$(tput setaf 245)     # proper neutral gray
-        RESET=$(tput sgr0)
-        UNLINE=$(tput smul)
-        STOPUNLINE=$(tput rmul)
-    else
-        # Fallback: ANSI escape sequences
-        RED='\033[31m'
-        GREEN='\033[32m'
-        CYAN='\033[36m'
-        YELLOW='\033[93m'
-        BPURP='\033[95m'
-        GREY='\033[90m'  # safe gray
-#        GREY='\033[38;5;245m'  # proper neutral gray
-        RESET='\033[0m'
-        UNLINE='\033[4m'
-        STOPUNLINE='\033[0m'
-    fi
- 
-    : "${RED:=}"
-    : "${GREEN:=}"
-    : "${CYAN:=}"
-    : "${YELLOW:=}"
-    : "${BPURP:=}"
-    : "${GREY:=}"
-    : "${RESET:=}"
-    : "${UNLINE:=}"
-    : "${STOPUNLINE:=}"
-    
-    # -------------------------
-    # Set first run variables path etc... keep from running every recursive loop 
-    # set new path, clean arrays, and greet user once
-    # -------------------------
-    if (( depth == 0 )); then
-        trap '_h_restore_path' RETURN
-        _h_add_admin_paths
-        
-        #--------------------------
-        # Reset arrays on first run
-        #--------------------------
-        __H_SOURCED_SCANNED=0
-        __H_SEEN_ALIASES=()
-        __H_SEEN_COMMANDS=()
-        __H_SEEN_BUILTINS=()
-        __H_SHADOW_SEEN=()
-        __H_VISITED=()
+    trap '_h_restore_path' RETURN
+    trap '_h_reset_extglob' RETURN
    
-        #--------------------------
-        # Greeting
-        #--------------------------
-        printf "\n╔══════════════════════════════════════════════╗\n"
-        printf "║   h – Bash Help Tool                         ║\n"
-        printf "╚══════════════════════════════════════════════╝\n"
-        
-        # -------------------------
-        # Check dependencies
-        _h_check_dependencies h_needed_deps h_optional_deps 1  || return 1 # 1 = exit if required deps missing
-    fi 
-        
-    # -------------------------
-    # Depth guard
-    # -------------------------
-    (( depth > MAX_DEPTH )) && { 
-        printf "%s${RED}Max recursion depth (%d) reached${RESET}\n" "$indent" "$MAX_DEPTH"
-        return 1 
-    }
+    local cmd ctype
     
+    _h_detect_os
+    _h_enable_extglob
+    _h_add_admin_paths # Setup PATH
+    _h_setup_colors # Setup tput or ansi
+    _h_check_dependencies __H_needed_deps __H_optional_deps 1  # 1 = exit if required deps missing
+
     # -------------------------
     # Get command or last command
     # -------------------------
@@ -129,73 +42,169 @@ h() {
         read -r -a fcmd <<< "$1"
     else
         read -r -a fcmd <<< "$(fc -ln -1)" || { 
-            printf "%s    ↳ ${RED}Failed to get last command${RESET}\n" "$indent"
+            printf "    ↳ %sFailed to get last command%s\n" "$RED" "$RESET"
             return 1
         }
     fi
     cmd="${fcmd[0]}"
     
-    # -------------------------------------------------------------------------
-    # handle arguments for h
-    # -------------------------------------------------------------------------
-    local fzffound=0
-    if command -v fzf &>/dev/null; then
-        fzffound=1
-    fi
-    
+    # ------------------------
+    # Handle options
+    # ------------------------
     case "$cmd" in
         -h|--help) _h_usage; return 0;;
         -v|--version) _h_ver; return 0;;
-        -t|--trace) shift; cmd="$1"; _h_print_trace "$cmd"; return 0;;
-        -f|--fzf)
-            if (( fzffound == 1 )); then 
-                local pick
-                pick=$(compgen -A function -A alias -A builtin -A command | sort -u | fzf --prompt="Get help for: ")
-                [[ -n "$pick" ]] || return 1
-                h "$pick"
-                return 0
-            else
-                printf "%s    ↳ ${YELLOW}fzf is not installed.${RESET}\n" "$indent"
-                printf "\n"
-                _h_usage;
-                return 0
-            fi  
-            ;; 
+        -t|--trace) 
+            shift
+            [[ -z $1 ]] && { printf "trace requires an argument\n" >&2; return 1; }
+            _h_print_trace "$1"
+            return 0
+            ;;
+        -f|--fzf) _h_fzf_search; return 0;;  # alias hf='command -v fzf >/dev/null 2>&1 && h --fzf || h'
     esac
     
-    if [[ "$cmd" == "h" ]]; then # h didnt work above consistantly... 
-        _h_usage # prevent spamming terminal with script.
+    if [[ "$cmd" == "h" ]]; then # prevent spamming terminal with h.
+        _h_usage # prevent spamming terminal with h.
         return 0
     fi
     
     # -------------------------------------------------------------------------
-    # Handle Edge case that fails with type. catch it here to avoid a crash later.
-    # ------------------------------------------------------------------------- 
-    if [[ "$cmd" == "]" ]]; then
-        printf "%s├─ Detected BASH Keyword ${CYAN}'%s' ${RESET}\n" "$indent" "$cmd"
-        printf "%s    ↳ ${CYAN}%s${RESET} has no help file\n" "$indent" "$cmd"
-        printf "%s    ↳ Definition:\n\n" "$indent"
-        printf "%s          ${CYAN}%s${RESET} -- Ends a conditional test expression.\n" "$indent" "$cmd"
+    # handle edge cases
+    # -------------------------------------------------------------------------
+    if [[ "$cmd" == "}" || "$cmd" == "[[" || "$cmd" == "]]" || "$cmd" == "]" ]]; then 
+        declare -A __H_KEYWORD_DESC=(
+        ["}"]="Ends a command block."
+        ["[["]="Begins a conditional test expression."
+        ["]]"]="Ends a conditional test expression."
+        ["]"]="Ends a conditional test expression."
+        )
+    
+        if [[ -n "${__H_KEYWORD_DESC[$cmd]}" ]]; then
+            printf "├─ Detected BASH Keyword ${CYAN}'%s' ${RESET}\n" "$cmd"
+            printf "    ↳ ${CYAN}%s${RESET} has no help file\n" "$cmd"
+            printf "    ↳ Definition:\n\n"
+            printf "          ${CYAN}%s${RESET} -- %s\n\n" "$cmd" "${__H_KEYWORD_DESC[$cmd]}"
+        fi
         return 0
-    fi 
+    fi
     
     # -------------------------------------------------------------------------
     # Detect command type
     # -------------------------------------------------------------------------
     ctype=$(type -t -- "$cmd" 2>/dev/null)
+    
     if [[ -z "$ctype" ]]; then
         printf "%s├─ ${RED}Unknown or invalid command:${CYAN} '%s'${RESET}\n" "$indent" "$cmd"
         printf "%s    ↳ Check your spelling and try again\n\n" "$indent" 
         return 1
     fi
+    
+    # Dispatch by type
+    case "$ctype" in
+        alias) _h_show_alias "$cmd" "$ctype" ;;
+        function) _h_show_function "$cmd" "$ctype" ;;
+        builtin) _h_show_builtin "$cmd" "$ctype" ;;   
+        keyword) _h_show_Keywords "$cmd" "$ctype" ;;
+        file) _h_show_external "$cmd" "$ctype" ;;
+    esac
+}
 
-    # -------------------------------------------------------------------------
-    # Handle keywords and provide help statements
-    # -------------------------------------------------------------------------
-declare -A __H_KEYWORD_DESC=(
-    [then]="Part of an if statment - Begins the command block for a true condition." 
-    [else]="Part of an if statment - Begins the command block if the condition is false." 
-    [elif]="Part of an if statment - Introduces a new condition if the previous one is false." 
+#------------------------------------------------------------------------
+# Function: _h_show_alias
+# Process aliases
+#------------------------------------------------------------------------
+_h_show_alias() {
+    local line_number
+    local nullglob_was=0
+    local found_location=""
+    
+    alias_def=$(alias "$cmd")
+        
+    printf "├─ ${CYAN}'%s' ${RESET}is an alias:\n" "$cmd"
+    printf "    ↳ Resolves to: ${CYAN}%s${RESET}\n" "$alias_def"
+ 
+    _h_sourcedtree
+    
+    #----------------------------
+    # Enable nullglob temporarily 
+    if shopt -q nullglob; then
+        nullglob_was=1
+    else
+        shopt -s nullglob
+    fi
+  
+    for file in "${__H_SOURCED_FILES_LIST[@]}"; do 
+        [[ -r "$file" ]] || continue
+        if grep -qE "^[[:space:]]*alias[[:space:]]+${cmd}=" "$file"; then
+           found_location="$file"
+           line_number=$(grep -nE "^[[:space:]]*alias[[:space:]]+$cmd=" "$file" | head -n1 | cut -d: -f1)               
+           printf "    ↳ Defined in: ${CYAN}%s (line %s)${RESET}\n" "$file" "$line_number"
+        fi
+    done
+    (( !nullglob_was )) && shopt -u nullglob     # Restore nullglob state if we enabled it
+    #----------------------------
+        
+    if [[ -z "$found_location" ]]; then
+        printf "    ↳ Declared in: %sinteractive shell (not from a file)%s\n" "$CYAN" "$RESET"
+    fi     
+    return 0      
+}
+
+#------------------------------------------------------------------------
+# Function: _h_show_function
+# Process functions
+#------------------------------------------------------------------------
+_h_show_function() {
+    local was_extdebug=0
+    local func_content
+    func_content=$(declare -f "$cmd")
+
+    #--------------------------- 
+    # Enable extdebug temporarily so declare -F includes file/line info       
+    if shopt -q extdebug; then
+        was_extdebug=1
+    else
+        shopt -s extdebug
+    fi
+        
+    read -r _ line file <<< "$(declare -F "$cmd")"
+
+    (( !was_extdebug )) && shopt -u extdebug  # Restore extdebug state if we enabled it
+    #---------------------------- 
+        
+    printf "├─ ${CYAN}'%q' ${RESET}is a shell function\n" "$cmd"  
+    if [[ "$file" == "main" ]]; then
+        printf "    ↳ Declared in: %sinteractive shell (not from a file)%s\n" "$CYAN" "$RESET"
+    else
+        printf "    ↳ Declared in: ${CYAN}%s (line %s)${RESET}\n" "$file" "$line"
+    fi
+    printf "    ↳ Showing preview of function: ${CYAN}%s${RESET}\n\n" "$cmd"     
+
+    _h_highlight_script "$func_content" "$file" "$line"
+    printf "\n    ======= End of function preview =======\n"  
+    return 0
+}
+
+#------------------------------------------------------------------------
+# Function: _h_show_builtin
+# Process builtins
+#------------------------------------------------------------------------
+_h_show_builtin() {
+    printf "├─ ${CYAN}'%s'${RESET} is a shell builtin\n" "$cmd"
+    printf "    ↳ Showing ${CYAN}'help %s'${RESET}:\n\n" "$cmd"
+    help "$cmd" 2>/dev/null | sed "s/^/        /"
+    return 0
+}        
+
+#------------------------------------------------------------------------
+# Function: _h_show_Keywords
+# Handle Keywords and edge cases that fail with type. 
+#------------------------------------------------------------------------
+_h_show_Keywords() {
+declare -A __H_KEYWORD_DESC2=(
+    [then]="Part of an if statement - Begins the command block for a true condition." 
+    [else]="Part of an if statement - Begins the command block if the condition is false." 
+    [elif]="Part of an if statement - Introduces a new condition if the previous one is false." 
     [fi]="Ends an if statement."
     [do]="Begins the body of a loop or conditional block."
     [done]="Ends the body of a loop or conditional block." 
@@ -203,211 +212,132 @@ declare -A __H_KEYWORD_DESC=(
     [!]="Negates the exit status of a command or pipeline." 
     [esac]="Ends a case statement."
     ["}"]="Ends a command block."
+    ["[["]="Begins a conditional test expression."
     ["]]"]="Ends a conditional test expression."
+    ["]"]="Ends a conditional test expression."   
 )
-
-if [[ $ctype == keyword ]]; then
-    printf "%s├─ Detected BASH Keyword ${CYAN}'%s' ${RESET}\n" "$indent" "$cmd"
-
+   
+    if [[ $cmd == "(" ]]; then
+        printf "├─ Detected BASH Keyword ${CYAN}'%s'${RESET}\n" "$cmd"    
+        printf "    ↳ ${CYAN}%s${RESET} has no help file\n" "$cmd"
+        printf "    ↳ Definition:\n\n" 
+        printf "          ${CYAN}%s${RESET} -- Begins a subshell. Commands inside run in a separate process.\n"
+        return 0
+    fi
+   
+    printf "├─ Detected BASH Keyword ${CYAN}'%s' ${RESET}\n" "$cmd"
     if help "$cmd" &>/dev/null; then
-        printf "%s    ↳ Showing  ${CYAN}'help %s'${RESET}:\n\n" "$indent" "$cmd"
+        printf "    ↳ Showing  ${CYAN}'help %s'${RESET}:\n\n" "$cmd"
         help "$cmd" 2>/dev/null | sed 's/^/    /'
-    elif [[ -n "${__H_KEYWORD_DESC[$cmd]}" ]]; then
-        printf "%s    ↳ ${CYAN}%s${RESET} has no help file\n" "$indent" "$cmd"
-        printf "%s    ↳ Definition:\n\n" "$indent"
-        printf "%s          ${CYAN}%s${RESET} -- %s\n" "$indent" "$cmd" "${__H_KEYWORD_DESC[$cmd]}"
+    elif [[ -n "${__H_KEYWORD_DESC2[$cmd]}" ]]; then
+        printf "    ↳ ${CYAN}%s${RESET} has no help file\n" "$cmd"
+        printf "    ↳ Definition:\n\n"
+        printf "          ${CYAN}%s${RESET} -- %s\n\n" "$cmd" "${__H_KEYWORD_DESC2[$cmd]}"
+    fi
+    return 0
+}   
+
+#------------------------------------------------------------------------
+# Function: _h_show_external
+# Process external commands
+#------------------------------------------------------------------------
+_h_show_external() {   
+
+    cmd_path=$(command -v "$cmd") || { 
+        printf "${RED}Command not found: '%s'${RESET}\n" "$cmd"
+        return 1
+    }
+        
+    local cmd_real file_info formatted_type output cmdname output_shown help_flags
+
+    cmd_real=$(readlink -f "$cmd_path" 2>/dev/null || echo "$cmd_path")
+    file_info=$(file -b "$cmd_real")
+    formatted_type=$(printf "%s" "$file_info" | sed -E \
+        $'s/, interpreter/\\\ninterpreter/g; 
+          s/, version/\\\nversion/g; 
+          s/, dynamically/\\\ndynamically/g; 
+          s/, BuildID/\\\nBuildID/g; 
+          s/, for /\\\nfor /g')
+          
+    help_flags=(--help -help -h "-?") 
+    output_shown=0          
+
+    printf "├─ ${CYAN}'%s' ${RESET}is an external command\n" "$cmd"
+    printf "    ↳ Path: ${CYAN}%s${RESET}\n" "$cmd_path"    
+  
+    if [[ "$cmd_real" != "$cmd_path" ]]; then # && \
+        printf "    ↳ ${YELLOW}Symbolic link ${RESET}to: ${YELLOW}%s${RESET}\n" "$cmd_real"
+        cmd_path="$cmd_real"
+        cmd="$cmd_real"
+    fi
+        
+    if grep -qiE 'script|text executable' <<< "$file_info"; then
+        printf "    ↳ Script Type: \n"
+            while IFS= read -r line; do
+                printf "    ⎟    ${CYAN}%s${RESET}\n" "$line"
+            done <<< "$formatted_type"    
+    fi
+    
+    cmdname=$(basename "$cmd_path")
+    
+    # Show help or script contents if text executable
+if [[ "$file_info" == *"script"* || "$file_info" == *"text executable"* ]]; then
+    local found_help_flag=""
+    
+    # Scan the script for common help flags
+    for flag in "${help_flags[@]}"; do
+        if grep -q -- "$flag" "$cmd_path"; then
+            found_help_flag="$flag"
+            break
+        fi
+    done
+
+    if [[ -n "$found_help_flag" ]]; then
+        # Only run the script if a help flag is actually referenced
+        output=$("$cmd_path" "$found_help_flag" 2>&1 || true)
+        if [[ -n "$output" ]] && _h_is_help_output "$output"; then
+            printf "    ↳ Showing help from '${CYAN}%s %s${RESET}':\n\n" "$cmdname" "$found_help_flag"
+            printf "%s\n\n" "$output" | sed "s/^/         /"
+            return 0
+        fi
+    fi
+
+    # Fallback: show a preview of the script without executing it
+    if [[ -r "$cmd_path" ]]; then
+        printf "    ↳ Showing preview of script '${CYAN}%s${RESET}':\n\n" "$cmd"
+        _h_highlight_script "$cmd_path" " " " "
+        printf "\n    ========== End of script preview =========\n"
     fi
     return 0
 fi
 
-    # -------------------------------------------------------------------------
-    # Builtins
-    # -------------------------------------------------------------------------
-    if [[ "$ctype" == "builtin" ]]; then
-        # Normal builtin
-        printf "%s├─ ${CYAN}'%s'${RESET} is a shell builtin\n" "$indent" "$cmd"
-        # Show help
-        printf "%s    ↳ Showing ${CYAN}'help %s'${RESET}:\n\n" "$indent" "$cmd"
-        help "$cmd" 2>/dev/null | sed "s/^/$indent        /"
-        return 0
-    fi
-        
-    # -------------------------------------------------------------------------
-    # Functions
-    # -------------------------------------------------------------------------
-    if [[ "$ctype" == "function" ]]; then
-
-        #--------------------------- 
-        # Enable extdebug temporarily so declare -F includes file/line info
-        local was_extdebug=0
-
-        if shopt -q extdebug; then
-            was_extdebug=1
-        else
-            shopt -s extdebug
-        fi
-        
-        read -r _ line file <<< "$(declare -F "$cmd")"
-
-        (( !was_extdebug )) && shopt -u extdebug  # Restore extdebug state if we enabled it
-        #---------------------------- 
-        
-        printf "%s├─ ${CYAN}'%q' ${RESET}is a shell function\n" "$indent" "$cmd"
-        
-        if [[ "$file" == "main" ]]; then
-            printf "%s    ↳ Declared in: ${CYAN}interactive shell (not from a file)${RESET}\n" "$indent"
-        else
-            printf "%s    ↳ Declared in: ${CYAN}%s (line %s)${RESET}\n" "$indent" "$file" "$line"
-        fi
-       
-        printf "%s    ↳ Showing preview of function: ${CYAN}%s${RESET}\n\n"  "$indent" "$cmd"     
-        local func_content
-        func_content=$(declare -f "$cmd")
-        _h_highlight_script "$func_content" "$indent" "$file" "$line"
-        printf "\n%s    ======= End of function preview =======\n" "$indent"   
-        return 0
-    fi
     
-    # -------------------------------------------------------------------------
-    # Aliases
-    # -------------------------------------------------------------------------
-    if [[ "$ctype" == "alias" ]]; then
-        # Avoid re-analyzing the same alias (prevents infinite loops)
-        [[ -n "${__H_SEEN_ALIASES[$cmd]}" ]] && return 0
-        __H_SEEN_ALIASES["$cmd"]=1
-    
-        # Get the alias expansion (strip surrounding quotes)
-        local raw
-        raw=$(alias "$cmd")
-        quote=${raw#*=}         # remove 'name='
-        quote="${quote:0:1}"      # first character → "'"
-        result="${raw#*"${quote}"}"  # removes everything up to first quote → "ls -alF'"
-        result="${result%"${quote}"}"     # removes trailing "'" → "ls -alF"
-        # shellcheck disable=SC2034
-        alias_expansion=$(_h_expand_vars "$result")
-        alias_def=$(alias "$cmd")
-        
-        printf "%s├─ ${CYAN}'%s' ${RESET}is an alias:\n" "$indent" "$cmd"
-        printf "%s    ↳ Resolves to: ${CYAN}%s${RESET}\n" "$indent" "$alias_def"
-        
-        # Show where alias is defined
-        local found_location=""
-        local line_number
-        _h_ensure_sourcedtree
-        #----------------------------
-        # Enable nullglob temporarily 
-        local nullglob_was=0
-        if shopt -q nullglob; then
-            nullglob_was=1
-        else
-            shopt -s nullglob
-        fi
-  
-        for file in "${__H_SOURCED_FILES_LIST[@]}"; do 
-             [[ -r "$file" ]] || continue
-             if grep -qE "^[[:space:]]*alias[[:space:]]+${cmd}=" "$file"; then
-                found_location="$file"
-                line_number=$(grep -nE "^[[:space:]]*alias[[:space:]]+$cmd=" "$file" | head -n1 | cut -d: -f1)               
-                printf "%s    ↳ Defined in: ${CYAN}%s (line %s)${RESET}\n" "$indent" "$file" "$line_number"
-             fi
-        done
-        (( !nullglob_was )) && shopt -u nullglob     # Restore nullglob state if we enabled it
-        #----------------------------
-        
-        if [[ -z "$found_location" ]]; then
-            printf "%s    ↳ Declared in: ${CYAN}interactive shell (not from a file)${RESET}\n" "$indent"
-        fi     
-        return 0      
-    fi
-
-    # -------------------------------------------------------------------------
-    # External commands
-    # -------------------------------------------------------------------------
-    if [[ "$ctype" == "file" ]]; then 
-        cmd_path=$(command -v "$cmd") || { 
-            printf "%s${RED}Command not found: '%s'${RESET}\n" "$indent" "$cmd"
-            return 1
-        }
-        
-        local cmd_real perlfound file_info formatted_type
-        cmd_real=$(readlink -f "$cmd_path" 2>/dev/null || echo "$cmd_path")
-        file_info=$(file -b "$cmd_real")
-        formatted_type=$(printf "%s" "$file_info" | sed -E \
-            $'s/, interpreter/\\\ninterpreter/g; 
-              s/, version/\\\nversion/g; 
-              s/, dynamically/\\\ndynamically/g; 
-              s/, BuildID/\\\nBuildID/g; 
-              s/, for /\\\nfor /g')
-        perlfound=0     
-        
-        if command -v perl &>/dev/null; then
-            perlfound=1
-        fi
-
-        printf "%s├─ ${CYAN}'%s' ${RESET}is an external command\n" "$indent" "$cmd"
-        printf "%s    ↳ Path: ${CYAN}%s${RESET}\n" "$indent" "$cmd_path"    
-  
-        if [[ "$cmd_real" != "$cmd_path" ]]; then # && \
-            printf "%s    ↳ ${YELLOW}Symbolic link ${RESET}to: ${YELLOW}%s${RESET}\n" "$indent" "$cmd_real"
-            cmd_path="$cmd_real"
-            cmd="$cmd_real"
-        fi
-        
-        if grep -qiE 'script|text executable' <<< "$file_info"; then
-            printf "%s    ↳ Script Type: \n" "$indent"
-                while IFS= read -r line; do
-                    printf "%s    ⎟    ${CYAN}%s${RESET}\n" "$indent" "$line"
-                done <<< "$formatted_type"    
-        fi
-        
-        # Show script contents if text executable
-        if [[ "$file_info" == *"script"* || "$file_info" == *"text executable"* ]]; then
-            printf "%s    ↳ Showing preview of script ${CYAN}'%s'${RESET}:\n" "$indent" "$cmd"
-            if (( perlfound == 0 )); then 
-                printf "%s    ↳ ${YELLOW}Optional dependency 'perl' missing — syntax highlighting reduced${RESET}\n" "$indent" 
-            fi
-            if [[ -r "$cmd_path" ]]; then
-                printf "\n"
-                _h_highlight_script "$cmd_path" "$indent" " " " "
-                printf "\n%s    ========== End of script preview ========= \n" "$indent"
-            fi
-            return 0
-        fi
-
     # Show help for external commands 
-        local output cmdname 
-        local output_shown
-        local help_flags
-        help_flags=(--help -help -h "-?") 
-        cmdname=$(basename "$cmd_path")
-        output_shown=0
-        
-        for flag in "${help_flags[@]}"; do
-            output="$("$cmd_path" "$flag" 2>&1 || true)"
+    for flag in "${help_flags[@]}"; do
+        output="$("$cmd_path" "$flag" 2>&1 || true)"
 
-            if [[ -n "$output" ]] && _h_is_help_output "$output"; then
-                printf "%s    ↳ Showing${CYAN} '%s %s'${RESET}:\n\n" "$indent" "$cmdname" "$flag"
-                printf "%s\n\n" "$output" | sed "s/^/$indent         /"
-                output_shown=1
-                break
-            fi
-        done
-        
-        # Fallback if no help output was shown
-        if (( output_shown == 0 )); then
-            local cmd_only="${cmd_path##*/}"
-            if command -v man &>/dev/null && man -w "$cmd_only" &>/dev/null; then
-                printf "%s    ↳ Manual available via${CYAN} 'man %s'${RESET}\n" "$indent" "$cmd_only"
-            elif command -v info &>/dev/null && info "$cmd_only" &>/dev/null; then
-                printf "%s    ↳ Info page available via ${CYAN}'info %s'${RESET}\n" "$indent" "$cmd_only" 
-            else 
-                printf "%s    ↳ ${RED}No help found for ${CYAN}'%s'${RESET}\n" "$indent" "$cmd_only"
-            fi
+        if [[ -n "$output" ]] && _h_is_help_output "$output"; then
+            printf "    ↳ Showing${CYAN} '%s %s'${RESET}:\n\n" "$cmdname" "$flag"
+            printf "%s\n\n" "$output" | sed "s/^/         /"
+            output_shown=1
+            break
         fi
-        return 0
+    done
+        
+    # Fallback if no help output was shown
+    if (( output_shown == 0 )); then
+        local cmd_only="${cmd_path##*/}"
+        if command -v man &>/dev/null && man -w "$cmd_only" &>/dev/null; then
+            printf "    ↳ Manual available via${CYAN} 'man %s'${RESET}\n" "$cmd_only"
+        elif command -v info &>/dev/null && info "$cmd_only" &>/dev/null; then
+            printf "    ↳ Info page available via ${CYAN}'info %s'${RESET}\n" "$cmd_only" 
+        else 
+            printf "    ↳ ${RED}No help found for ${CYAN}'%s'${RESET}\n" "$cmd_only"
+        fi
     fi
-}
- 
+    return 0
+}    
+
 #------------------------------------------------------------------------
 # Function: _h_usage
 # Purpose : Display usage information and examples for the `h` command analyzer.
@@ -420,22 +350,16 @@ _h_usage() {
      actually is and try to provide any relevant help that it finds.
 
      Options:
-           -h --help or h      Show this help text.
-           -v --version        Show version information.
-           -f --fzf            Use fzf to interactivly search commands
-           -t --trace          Command resolution order mapping 
-                                                            
+          -h --help or h      Show this help text.
+          -v --version        Show version information.
+          -t --trace          Command resolution order mapping 
+          -f --fzf            Use fzf to interactivly search commands
+     
      Examples:
-           h                   # Get help for your most recent command
-           h awk               # Get help for 'awk'
-           h -t awk            # Which awk runs and why that one?
- 
-     Features:
-       • Shows --help/-help/-h/-? output or points to man/info pages
-       • Provide help output for builtins and keywords 
-       • Command resolution order mapping (alias → function → builtin → PATH).
-       • For aliases, functions and scripts display previews of contents.
-       
+          h                   # Get help for your most recent command
+          h awk               # Get help for 'awk'
+          h -t awk            # Which awk runs and why that one?
+
 EOF
 }
 
@@ -444,13 +368,10 @@ EOF
 # Purpose : Display version information.
 #------------------------------------------------------------------------
 _h_ver() {
+
+    printf "\n     h V%s  — Bash Command Analyzer\n" "$__H_version"
     cat <<'EOF'
-
-     h v3.0.52 — Bash help tool  
-     Author : John Blair
-          
      MIT License
-
      Copyright (c) 2025 John Blair
 
      Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -473,6 +394,113 @@ _h_ver() {
 
 EOF
 }
+
+#------------------------------------------------------------------------
+# Function: _h_fzf_search
+# start with fzf
+#------------------------------------------------------------------------  
+_h_fzf_search() {
+
+    local fzffound=0 pick
+    
+    if command -v fzf &>/dev/null; then
+        fzffound=1
+    fi
+
+    if (( fzffound == 1 )); then 
+        pick=$(compgen -A function -A alias -A builtin -A command | sort -u | fzf --prompt="Get help for: ")
+        [[ -n "$pick" ]] || return 1
+        h "$pick" 
+        return 0
+    else
+        printf "    ↳ %sfzf is not installed.%s\n\n" "$YELLOW" "$RESET"
+        _h_usage
+        return 0
+    fi  
+}
+
+#------------------------------------------------------------------------
+# Function: _h_detect_os
+# detect os for differences in implementation
+#------------------------------------------------------------------------
+_h_detect_os() {
+        __H_RHEL_like=0       
+        if [ -f /etc/os-release ]; then
+            while IFS='=' read -r key value; do
+                # Remove surrounding quotes if present
+                value="${value%\"}"
+                value="${value#\"}"
+                case "$key" in
+                    ID)
+                        [[ "$value" == "fedora" || "$value" == "rhel" ]] && __H_RHEL_like=1
+                        ;;
+                    ID_LIKE)
+                        [[ "$value" == *"rhel"* ]] && __H_RHEL_like=1
+                        ;;
+                esac
+            done < /etc/os-release
+        fi
+}    
+
+#------------------------------------------------------------------------
+# Function: _h_enable_extglob
+# Process aliases
+#------------------------------------------------------------------------
+_h_enable_extglob() {
+    if shopt -q extglob; then
+        __H_extglob_was=1
+    else
+        shopt -s extglob
+    fi
+}
+
+#------------------------------------------------------------------------
+# Function: _h_reset_extglob
+# Process aliases
+#------------------------------------------------------------------------
+_h_reset_extglob() {
+    (( !__H_extglob_was )) && shopt -u extglob     # Restore extglob state if we enabled it
+}
+
+#------------------------------------------------------------------------
+# Function: _h_setup_colors         Colors (tput → ANSI → none)
+# Process external commands
+#------------------------------------------------------------------------
+_h_setup_colors() {
+    if command -v tput &>/dev/null && [[ $(tput colors 2>/dev/null) -ge 8 ]]; then
+        # Preferred: tput colors
+        RED=$(tput setaf 1)
+        GREEN=$(tput setaf 2)
+        CYAN=$(tput setaf 6)
+        YELLOW=$(tput setaf 11)
+        BPURP=$(tput setaf 13)
+        GREY=$(tput setaf 245)     # proper neutral gray
+        RESET=$(tput sgr0)
+        UNLINE=$(tput smul)
+        STOPUNLINE=$(tput rmul)
+    else
+        # Fallback: ANSI escape sequences
+        RED='\033[31m'
+        GREEN='\033[32m'
+        CYAN='\033[36m'
+        YELLOW='\033[93m'
+        BPURP='\033[95m'
+        GREY='\033[90m'  # safe gray
+        RESET='\033[0m'
+        UNLINE='\033[4m'
+        STOPUNLINE='\033[0m'
+    fi
+ 
+    : "${RED:=}"
+    : "${GREEN:=}"
+    : "${CYAN:=}"
+    : "${YELLOW:=}"
+    : "${BPURP:=}"
+    : "${GREY:=}"
+    : "${RESET:=}"
+    : "${UNLINE:=}"
+    : "${STOPUNLINE:=}"
+}    
 
 #------------------------------------------------------------------------
 # Function: _h_is_help_output
@@ -500,7 +528,7 @@ _h_is_help_output() {
 _h_add_admin_paths() {
     # Save PATH if not already saved 
     if [[ -z "$OLD_PATH" ]]; then
-        OLD_PATH="$PATH"
+        __H_OLD_PATH="$PATH"
     fi
 
     local admin_dirs=(
@@ -535,9 +563,9 @@ _h_add_admin_paths() {
 # Automatically restore PATH when leaving scope
 #------------------------------------------------------------------------
 _h_restore_path() {
-    if [[ -n "$OLD_PATH" ]]; then
-        PATH="$OLD_PATH"
-        unset OLD_PATH
+    if [[ -n "$__H_OLD_PATH" ]]; then
+        PATH="$__H_OLD_PATH"
+        unset __H_OLD_PATH
     fi
 }
 
@@ -559,22 +587,6 @@ _h_completion() {
 }
 
 #------------------------------------------------------------------------
-# Function: _h_expand_vars
-# Purpose : expand variables for aliases so $HOME resolves to /home/jb/ 
-#------------------------------------------------------------------------
-_h_expand_vars() {
-    local input="$1"
-    # Only expand variables like $HOME, $USER, etc. Use 'printf' with parameter expansion to avoid arbitrary command execution.
-    # Use a small whitelist: HOME, USER, PWD, SHELL
-    local out="$input"
-    [[ -n "$HOME" ]] && out="${out//\$HOME/$HOME}"
-    [[ -n "$USER" ]] && out="${out//\$USER/$USER}"
-    [[ -n "$PWD" ]] && out="${out//\$PWD/$PWD}"
-    [[ -n "$SHELL" ]] && out="${out//\$SHELL/$SHELL}"
-    printf '%s' "$out"
-}
-
-#------------------------------------------------------------------------
 # Function: _h_sourcedtree
 # Purpose: Recursively scan for files that are sourced.
 #------------------------------------------------------------------------
@@ -582,11 +594,19 @@ _h_sourcedtree() {
     local file files depth max_depth
     depth=0
     max_depth="${MAX_DEPTH:-5}"
-    files=("$BASH_ENV")
+    
+    [[ -n "$BASH_ENV" ]] && files+=("$BASH_ENV")
 
-if shopt -q login_shell; then
-    [[ -d /etc/profile.d ]] && files+=( /etc/profile.d/*.sh )
-    [[ -f /etc/profile && -r /etc/profile ]] && files+=( /etc/profile )
+    # Temporarily enable nullglob
+    local nullglob_was=0
+    if ! shopt -q nullglob; then
+        shopt -s nullglob
+        nullglob_was=1
+    fi
+
+    if [[ -o login_shell ]]; then
+        [[ -d /etc/profile.d ]] && files+=( /etc/profile.d/*.sh )
+        [[ -f /etc/profile && -r /etc/profile ]] && files+=( /etc/profile )
         if [[ -f ~/.bash_profile && -r ~/.bash_profile ]]; then 
             files+=( ~/.bash_profile )
         elif [[ -f ~/.bash_login && -r ~/.bash_login ]]; then 
@@ -594,62 +614,48 @@ if shopt -q login_shell; then
         elif [[ -f ~/.profile && -r ~/.profile ]]; then 
             files+=( ~/.profile )
         fi
-else
-    # Non-login interactive shell
-    [[ -d /etc/bash.bashrc.d ]] && files+=( /etc/bash.bashrc.d/*.sh )
-    [[ -f ~/.bashrc && -r ~/.bashrc ]] && files+=( ~/.bashrc )
-    [[ -f /etc/bash.bashrc && -r /etc/bash.bashrc ]] && files+=( /etc/bash.bashrc )
-    [[ -f /etc/bashrc && -r /etc/bashrc ]] && files+=( /etc/bashrc )
-   
-    if [ -f /etc/os-release ]; then
-        while IFS='=' read -r key value; do
-            # Remove surrounding quotes if present
-            value="${value%\"}"
-            value="${value#\"}"
-            case "$key" in
-                ID)
-                    [[ "$value" == "fedora" || "$value" == "rhel" ]] && is_rhel_like=1
-                    ;;
-                ID_LIKE)
-                    [[ "$value" == *"rhel"* ]] && is_rhel_like=1
-                    ;;
-            esac
-        done < /etc/os-release
+    else
+        # Non-login interactive shell
+        [[ -d /etc/bash.bashrc.d ]] && files+=( /etc/bash.bashrc.d/*.sh )
+        [[ -f ~/.bashrc && -r ~/.bashrc ]] && files+=( ~/.bashrc )
+        [[ -f /etc/bash.bashrc && -r /etc/bash.bashrc ]] && files+=( /etc/bash.bashrc )
+        [[ -f /etc/bashrc && -r /etc/bashrc ]] && files+=( /etc/bashrc )
 
-        if [[ -n "$is_rhel_like" ]]; then
+        if (( "$__H_RHEL_like" == 1 )); then
             # This system is Fedora/RHEL-like
             files+=( /etc/profile.d/*.sh )
         fi
-    fi
-fi  
+    fi  
 
+    # Restore nullglob if we changed it
+    (( nullglob_was == 1 )) && shopt -u nullglob
+   
     for file in "${files[@]}"; do
         _h_sourcedtree_single "$file" "$depth" "$max_depth"
     done
 }
 
-    #-----------------------------------------------------------
-    # Internal recursive function
+#-----------------------------------------------------------
+# Internal recursive function
 _h_sourcedtree_single() {
     local file="$1"
     local depth="${2:-0}"
     local max_depth="${3:-5}"
+    local expanded line f left right decl
+    local arr_name="${BASH_REMATCH[1]}"
     (( depth > max_depth )) && return
+ 
+    # Expand path
+    expanded=$(_h_expand_path "$file")
+    expanded="${expanded%%$'\n'}"   # strip newlines
 
-# Expand path
-local expanded
-expanded=$(_h_expand_path "$file")
-expanded="${expanded%%$'\n'}"   # strip newlines
+    # Skip empty, duplicates, or unreadable files
+    [[ -z "$expanded" ]] && return
+    [[ -n ${__H_SOURCED_FILES_MAP["$expanded"]} ]] && return
+    [[ ! -f "$expanded" || ! -r "$expanded" ]] && return
 
-# Skip empty, duplicates, or unreadable files
-[[ -z "$expanded" ]] && return
-[[ -n ${__H_SOURCED_FILES_MAP["$expanded"]} ]] && return
-[[ ! -f "$expanded" || ! -r "$expanded" ]] && return
-
-__H_SOURCED_FILES_MAP["$expanded"]=1
-__H_SOURCED_FILES_LIST+=("$expanded")
-
-    local line f left right
+    __H_SOURCED_FILES_MAP["$expanded"]=1
+    __H_SOURCED_FILES_LIST+=("$expanded")
 
     while IFS= read -r line; do
         # Skip comments and empty lines
@@ -691,40 +697,36 @@ __H_SOURCED_FILES_LIST+=("$expanded")
             continue
         fi
 
-#  Array sourcing: source "${ARRAY[@]}"  (safe mode, no eval)
-if [[ $line =~ source[[:space:]]+\"\$\{([a-zA-Z_][a-zA-Z0-9_]*)\[@\]\}\" ]]
-then
-    local arr_name="${BASH_REMATCH[1]}"
-    local decl
+        #  Array sourcing: source "${ARRAY[@]}"  (safe mode, no eval)
+        if [[ $line =~ source[[:space:]]+\"\$\{([a-zA-Z_][a-zA-Z0-9_]*)\[@\]\}\" ]]; then
 
-    # Extract array declaration safely
-    decl=$(declare -p "$arr_name" 2>/dev/null) || return
+            # Extract array declaration safely
+            decl=$(declare -p "$arr_name" 2>/dev/null) || return
 
-    # Only allow indexed or associative arrays
-    [[ $decl =~ ^declare\ -[aA] ]] || return
+            # Only allow indexed or associative arrays
+            [[ $decl =~ ^declare\ -[aA] ]] || return
 
-    # Extract elements (still text, not executed)
-    local elems
-    mapfile -t elems < <(
-        sed -n 's/^declare \-[aA][^=]*=(//p' <<<"$decl" |
-        tr -d '()' |
-        tr ' ' '\n'
-    )
+            # Extract elements (still text, not executed)
+            local elems
+            mapfile -t elems < <(
+                sed -n 's/^declare \-[aA][^=]*=(//p' <<<"$decl" |
+                tr -d '()' |
+                tr ' ' '\n'
+            )
 
-    for f in "${elems[@]}"; do
-        # Reject anything remotely executable
-        [[ $f =~ [\$\`\;\&\|] ]] && continue
-
-        f=$(_h_expand_path "$f")
-        [[ -f "$f" ]] && _h_sourcedtree_single "$f" $((depth + 1)) "$max_depth"
-    done
-fi
+            for f in "${elems[@]}"; do
+                # Reject anything remotely executable
+                [[ $f =~ [\$\`\;\&\|] ]] && continue
+                f=$(_h_expand_path "$f")
+                [[ -f "$f" ]] && _h_sourcedtree_single "$f" $((depth + 1)) "$max_depth"
+            done
+        fi
 
     done < "$expanded"
 }
 
-    #-----------------------------------------------------------
-    # Helper: _h_expand_path
+#-----------------------------------------------------------
+# Helper: _h_expand_path
 _h_expand_path() {
     local p="$1"
 
@@ -752,69 +754,333 @@ _h_expand_path() {
     p="${p%%*( )}"
     printf '%s' "$p"
 }
-    #-----------------------------------------------------------
-    # Helper: _h_ensure_sourcedtree
-_h_ensure_sourcedtree() {
-    (( __H_SOURCED_SCANNED )) && return
-    _h_sourcedtree
-    __H_SOURCED_SCANNED=1
+
+#------------------------------------------------------------------------
+# Function: _h_print_trace
+# Purpose: Command Resolution Trace (aliases, functions, builtins, PATH)
+#------------------------------------------------------------------------
+_h_print_trace() {
+    local cmd="$1"
+    local path_winner=0
+    local bash_winner_type=""
+    local -a res state rc
+    local winner=""
+    local found_path=""
+    local alias_def="" file line canonical interp ctype
+    local shadowed_file=0
+    state=""
+    _h_resolve_command "$cmd" res
+    printf "├─ Command Resolution Trace of ${CYAN}%s${RESET}\n" "$cmd"
+    printf "    ⎟ \n"
+    # 1. Alias
+    if [[ ${res[0]} == alias\|found* ]]; then
+        alias_def="${res[0]#*|found|}"       
+        printf "    ├─ Alias:  -  ${CYAN}found  %s → %s${RESET}\n" "$cmd" "$alias_def"
+        winner="alias"
+        bash_winner_type="alias"
+        found_path="$cmd"
+    else
+        printf "    ├─ Alias:  -  not found\n" 
+    fi
+    
+    # 2. function
+    if [[ ${res[1]} == function\|found* ]]; then
+        IFS='|' read -r _ _ file line <<< "${res[1]}"
+        if [[ -z $winner ]]; then
+            winner="function"
+            bash_winner_type="function"   
+            found_path="$cmd"
+            printf "    ├─ Function:  -  ${CYAN}found %s → (%s : line %s)${RESET}\n" "$cmd" "$file" "$line"  
+        else
+            printf "    ├─ Function:  -  ${GREY}found %s → (%s : line %s) [shadowed]${RESET}\n" "$cmd" "$file" "$line"
+        fi
+    else
+        printf "    ├─ Function:  -  not found\n" 
+    fi
+    
+    # 3. Builtin
+    if [[ ${res[2]} == builtin\|found ]]; then
+    
+        _h_is_builtin_disabled "$cmd"
+        rc=$?
+        [[ $rc -eq 0 ]] && state2=disabled
+        [[ $rc -eq 1 ]] && state2=enabled
+        
+        if [[ -z $winner ]]; then
+            printf "    ├─ Builtin:  -  ${CYAN}%s → %s${RESET}\n" "$cmd" "$state2"
+            winner="builtin"
+            bash_winner_type="builtin"
+            [[ -z $found_path ]] && found_path="$cmd"
+        else
+            # builtin shadowed by alias or function
+            printf "    ├─ Builtin:  -  ${GREY}%s → %s [shadowed]${RESET}\n" "$cmd" "$state2"
+        fi
+    else
+        printf "    ├─ Builtin:  -  not found\n" 
+    fi
+    
+    # 4. Keyword
+    if [[ ${res[3]} == keyword\|found ]]; then
+        if [[ -z $winner ]]; then
+            printf "    ├─ Keyword:  -  ${CYAN}%s → found${RESET}\n" "$cmd"
+            winner="keyword"
+            bash_winner_type="keyword"
+            [[ -z $found_path ]] && found_path="$cmd"
+        else
+            printf "    ├─ Keyword:  -  ${GREY}%s → found [shadowed]${RESET}\n" "$cmd"
+        fi
+    else
+        printf "    ├─ Keyword:  -  not found\n" 
+    fi
+    printf "    ⎟ \n"
+    # 5. PATH
+    printf "    ├─ \$PATH in order:\n"
+    for ((i=4; i<${#res[@]}; i++)); do
+        IFS='|' read -r _ dir state target <<< "${res[i]}"
+        case "$state" in
+            notfound)
+                printf "    ⎟    ↳ %-24s - not found\n" "$dir"
+                ;;                
+            file)
+                if [[ -z $found_path ]]; then
+                    printf "    ⎟    ↳ %-24s - ${CYAN}%s${RESET} - ${CYAN}found${RESET}\n" "$dir" "$cmd"
+                    found_path="$dir/$cmd"
+                    [[ -z $bash_winner_type ]] && path_winner=1
+                else
+                    printf "    ⎟    ↳ %-24s - ${GREY}%s${RESET} - ${GREY}found [shadowed]${RESET}\n" "$dir" "$cmd"
+                fi
+                ;;
+            symlink)
+                if [[ -z $found_path ]]; then
+                    printf "    ⎟    ↳ %-24s - ${CYAN}%s${RESET} - ${YELLOW}Symlink to [ %s ]${RESET}\n" \
+                        "$dir" "$cmd" "$target"
+                    found_path="$dir/$cmd"
+                    [[ -z $bash_winner_type ]] && path_winner=1
+                else
+                    printf "    ⎟    ↳ %-24s - ${GREY}%s${RESET} - ${GREY}Symlink [shadowed]${RESET}\n" "$dir" "$cmd"
+                fi
+                ;;
+        esac
+    done
+    printf "    ⎟ \n"
+    
+    
+    # Determine if any PATH entry exists for this cmd
+    for ((i=4; i<${#res[@]}; i++)); do
+        IFS='|' read -r _ dir state target <<< "${res[i]}"
+        if [[ "$state" == "file" || "$state" == "symlink" ]]; then
+            shadowed_file=1
+            break
+        fi
+    done
+    
+    # Bash resolution target
+    printf "    ├─ Bash Resolution Target:\n"
+    if [[ -n $found_path ]]; then
+        canonical=$(readlink -f -- "$found_path" 2>/dev/null || echo "$found_path")      
+        case "$bash_winner_type" in
+            alias)
+                printf "    ⎟    ↳ Executed: ${CYAN}%s${RESET}\n" "$alias_def"
+                ;;
+            function)
+                printf "    ⎟    ↳ Executed: ${CYAN}Function  %s → (%s : line %s)${RESET}\n" "$found_path" "$file" "$line"
+                ;;
+            builtin)
+                if [[ "$state2" == "enabled" ]]; then
+                    printf "    ⎟    ↳ Executed: ${CYAN}Builtin %s → %s ${RESET}\n" "$found_path" "$state2"
+                else
+                    printf "    ⎟    ↳ Executed: ${RED}Builtin %s is %s → Nothing Executed${RESET}\n" "$found_path" "$state2"   
+                fi     
+                ;;
+            keyword)        
+                # Always print keyword line
+                printf "    ⎟    ↳ Resolved Keyword: ${CYAN}%s${RESET}\n" "$cmd"
+
+                if (( shadowed_file )); then
+                    printf "    ⎟    ↳ Note: filesystem executables named ${CYAN}%s${RESET} are unreachable by bare invocation\n" "$cmd"
+                fi
+                ;;
+            *)
+                if [[ "$found_path" != "$canonical" ]]; then
+                    printf "    ⎟    ↳ Executed: ${CYAN}%s${RESET} - ${YELLOW}Symlink to [ %s ]${RESET}\n" "$found_path" "$canonical"
+                else
+                    printf "    ⎟    ↳ Executed: ${CYAN}%s${RESET}\n" "$found_path"
+                fi
+                ;;
+        esac
+    else
+        printf "    ⎟    ↳ Executed: not found\n"
+    fi
+    
+    printf "    ⎟ \n"
+    printf "    ├─ Kernel Execution Target:\n"
+    
+    # Kernel execution
+    if (( path_winner )); then
+        canonical=$(readlink -f -- "$found_path" 2>/dev/null || echo "$found_path")
+        interp=$(readelf -l "$canonical" 2>/dev/null | awk '/interpreter/ {gsub(/[][]/, "", $NF); print $NF}')
+        
+        if [[ "$found_path" != "$canonical" ]]; then
+            printf "    ⎟    ↳ ${YELLOW}Symlink${RESET} → ${BPURP}%s${RESET}\n" "$canonical"
+        else
+            printf "    ⎟    ↳ Executable → %s\n" "$canonical"
+        fi
+
+        # ELF interpreter
+        if file "$canonical" 2>/dev/null | grep -q ELF; then
+            [[ -n $interp ]] && printf "    ⎟    ↳ ELF interpreter: ${CYAN}%s${RESET}\n" "$interp"
+        fi
+
+        # Script shebang
+        if head -1 "$canonical" 2>/dev/null | grep -q '^#!'; then
+            printf "    ⎟    ↳ Shebang: ${CYAN}%s${RESET}\n" "$(head -1 "$canonical" | cut -c3-)"
+        fi
+    else
+        printf "    ⎟    ↳ NONE \n"  
+    fi
+    printf "    ⎟ \n"
+    printf "    └──────────────────────────────────────────\n\n" 
+}
+
+#---------------------
+# Helper function: _h_resolve_command
+_h_resolve_command() {
+    local cmd="$1"
+    local -n out_refh="$2"
+    local type_kind line file
+    local was_extdebug=0        
+    out_refh=()
+    type_kind=$(type -t "$cmd" 2>/dev/null)
+
+    # Alias
+    if [[ "$type_kind" == "alias" ]]; then
+        out_refh+=("alias|found|$(alias "$cmd")")
+    else
+        out_refh+=("alias|notfound")
+    fi
+
+    # Function
+    if declare -F "$cmd" &>/dev/null; then
+        shopt -q extdebug || { shopt -s extdebug; was_extdebug=1; }
+        read -r _ line file <<< "$(declare -F "$cmd")"
+        (( was_extdebug )) && shopt -u extdebug
+        [[ -z $file ]] && file="interactive shell"
+        out_refh+=("function|found|$file|$line")
+    else
+        out_refh+=("function|notfound")
+    fi
+
+    # Builtin
+    if compgen -b | grep -qx "$cmd"; then
+        out_refh+=("builtin|found")
+    else
+        out_refh+=("builtin|notfound")
+    fi
+
+    # Keyword
+    if compgen -k | grep -qx "$cmd"; then
+        out_refh+=("keyword|found")
+    else
+        out_refh+=("keyword|notfound")
+    fi
+
+    # PATH
+    IFS=: read -ra dirs <<< "$PATH"
+    for d in "${dirs[@]}"; do
+        local p="$d/$cmd"
+        if [[ -x "$p" ]]; then
+            if [[ -L "$p" ]]; then
+                out_refh+=("path|$d|symlink|$(readlink -f "$p")")
+            else
+                out_refh+=("path|$d|file")
+            fi
+        else
+            out_refh+=("path|$d|notfound")
+        fi
+    done
+}
+
+#---------------------
+# Helper function: _h_is_builtin_disabled
+_h_is_builtin_disabled() {
+    local name=$1
+    local check
+
+    # Check if builtin is disabled
+    check=$(enable -a | awk -v n="$name" '$1=="enable" && $2=="-n" && $3==n { print $3 }')
+    if [[ "$check" == "$name" ]]; then
+        return 0  # 0 means disabled
+    fi
+
+    # Check if builtin exists and is enabled
+    check=$(enable -a | awk -v n="$name" '$1=="enable" && $2==n { print $2 }')
+    if [[ "$check" == "$name" ]]; then
+        return 1  # 1 means enabled
+    fi
+
+    # Not found
+    return 2
 }
 
 #------------------------------------------------------------------------
-# Function: _h_highlight_script   # _h_highlight_script "$path-to-script" "<blankspaces>"
-# Purpose: Modular syntax highlighting with indentation based on string in $2
+# Function: _h_highlight_script   
+# Purpose: Modular syntax highlighting with indantation based on string in $2
+# _h_highlight_script "$path-to-script" "<blankspaces>"
+# _h_highlight_script "$func_content" "$file" "$line"
 #------------------------------------------------------------------------
 _h_highlight_script() {
     local input="$1"
     local indent="    "
-    local file="$3"
-    local line="$4"
-   
-    # Construct header for literal text or file
+    local file="$2"
+    local line="$3"
     local header=""
+    local code   
+    
+    # Construct header for functions or files
     if [[ -n "$file" && -n "$line" ]]; then
         if [[ "$file" == "main" ]]; then
             header="Interactive shell (not from a file)"
         else    
-        header="$file (line $line)"
+            header="$file (line $line)"
         fi
     elif [[ -f "$input" ]]; then
         header="$input"
     fi
     
     # Read file if it exists
-    local code
+
     if [[ -f "$input" ]]; then
         code=$(<"$input")
     else
         code="$input"
     fi
     
-#----------------------------------------
-# Choose bat or batcat, if available
-local bat_pager=""
-if command -v bat &>/dev/null; then
-    bat_pager="bat"
-elif command -v batcat &>/dev/null; then
-    bat_pager="batcat"
-fi
-
-# If bat is available, use it
-if [[ -n "$bat_pager" ]]; then
-    if [[ -f "$input" ]]; then
-        "$bat_pager" --color=always --paging=never --line-range :50 --file-name "$input" "$input" \
-        | sed "s/^/$indent/"
-    else
-        # Input is literal text → use process substitution
-        printf "%s" "$code" \
-        | "$bat_pager" --color=always --language bash --paging=never --line-range :50 --file-name "$header" - \
-        | sed "s/^/$indent/"
+    #----------------------------------------
+    # Choose bat or batcat, if available
+    local bat_pager=""
+    if command -v bat &>/dev/null; then
+        bat_pager="bat"
+    elif command -v batcat &>/dev/null; then
+        bat_pager="batcat"
     fi
-    return
-fi
+
+    # If bat is available, use it
+    if [[ -n "$bat_pager" ]]; then
+        if [[ -f "$input" ]]; then
+            "$bat_pager" --color=always --paging=never --line-range :50 --file-name "$input" "$input" \
+            | sed "s/^/    /"
+        else
+            # Input is literal text → use process substitution
+            printf "%s" "$code" \
+            | "$bat_pager" --color=always --language bash --paging=never --line-range :50 --file-name "$header" - \
+            | sed "s/^/    /"
+        fi
+        return
+    fi
 #----------------------------------------
- 
-    perl - "$code" "$indent" <<'PERL_CODE'
+
+    if command -v perl &>/dev/null; then
+        perl - "$code" "$indent" <<'PERL_CODE'
 use strict;
 use warnings;
 
@@ -864,12 +1130,16 @@ for my $line (split /\n/, $content) {
     print highlight($line, $indent), "\n";
 }
 PERL_CODE
+
+    else
+        printf "%s\n" "$code" | sed "s/^/    /"
+    fi
 }
 
 #------------------------------------------------------------------------
 # Function: _h_check_dependencies
 # Purpose : Check core and optional dependencies, warn user, optionally exit on missing core deps
-# Usage   : _h_check_dependencies needed_deps optional_deps [EXIT_ON_MISSING] 0or1
+# Usage   : _h_check_dependencies __H_needed_deps __H_optional_deps [EXIT_ON_MISSING] 0or1
 #------------------------------------------------------------------------
 _h_check_dependencies() {
     local -n required="$1"
@@ -898,260 +1168,6 @@ _h_check_dependencies() {
         fi
     fi
     return 0
-}
-
-#------------------------------------------------------------------------
-# Function: _h_print_trace
-# Purpose: Command Resolution Trace (aliases, functions, builtins, PATH)
-#------------------------------------------------------------------------
-_h_print_trace() {
-    local cmd="$1"
-    local path_winner=0
-    local bash_winner_type=""
-    local -a res
-    local winner=""
-    local found_path=""
-    local alias_def="" file line quote result
-
-    _h_resolve_command "$cmd" res
-
-    printf "\n    ├─ ${CYAN}%s${RESET} -- command resolution order:\n" "$cmd"
-    printf "    ⎟\n" 
-
-    # 1. Alias
-    printf "    ├─ Alias?\n"
-    if [[ ${res[0]} == alias\|found* ]]; then
-        alias_def="${res[0]#*|found|}"
-        quote="${alias_def#*=}"   # removes everything up to '=' → "'ls -alF'"
-        quote="${quote:0:1}"      # first character → "'"
-        result="${alias_def#*"${quote}"}"  # removes everything up to first quote → "ls -alF'"
-        result="${result%"${quote}"}"      # removes trailing "'" → "ls -alF"          
-        printf "    ⎟    ↳ ${CYAN}%s - found → %s${RESET}\n" "$cmd" "$alias_def"
-        winner="alias"
-        bash_winner_type="alias"
-        found_path="$cmd"
-    else
-        printf "    ⎟    ↳ %s - not found\n" "$cmd"
-    fi
-    printf "    ⎟   \n" 
-    
-   # 2. function
-printf "    ├─ Function?\n"
-if [[ ${res[1]} == function\|found* ]]; then
-    IFS='|' read -r _ _ file line <<< "${res[1]}"
-    if [[ -z $winner ]]; then
-        winner="function"
-        bash_winner_type="function"   
-        found_path="$cmd"
-        printf "    ⎟    ↳ ${CYAN}%s - found → ${RESET} (${CYAN}%s : line %s${RESET})\n" "$cmd" "$file" "$line"  
-    else
-        printf "    ⎟    ↳ ${GREY}%s - found → (%s : line %s) [shadowed]${RESET}\n" "$cmd" "$file" "$line"
-    fi
-else
-    printf "    ⎟    ↳ %s - not found\n" "$cmd"
-fi
-printf "    ⎟   \n"
-    
-    # 3. Builtin
-    printf "    ├─ Builtin?\n"
-    if [[ ${res[2]} == builtin\|found ]]; then
-        if [[ -z $winner ]]; then
-            printf "    ⎟    ↳  ${CYAN}%s${RESET} - ${CYAN}enabled${RESET}\n" "$cmd"
-            winner="builtin"
-            bash_winner_type="builtin"
-            [[ -z $found_path ]] && found_path="$cmd"
-        else
-            # builtin shadowed by alias or function
-            printf "    ⎟    ↳ ${GREY}%s${RESET} - ${GREY}enabled [shadowed]${RESET}\n" "$cmd"
-        fi
-    else
-        printf "    ⎟    ↳ %s - not found\n" "$cmd"
-    fi
-    printf "    ⎟   \n"
-    
-    # 4. Keyword
-printf "    ├─ Keyword?\n"
-if [[ ${res[3]} == keyword\|found ]]; then
-    if [[ -z $winner ]]; then
-        printf "    ⎟    ↳ ${CYAN}%s${RESET} - ${CYAN}found${RESET}\n" "$cmd"
-        winner="keyword"
-        bash_winner_type="keyword"
-        [[ -z $found_path ]] && found_path="$cmd"
-    else
-        printf "    ⎟    ↳ ${GREY}%s${RESET} - ${GREY}found [shadowed]${RESET}\n" "$cmd"
-    fi
-else
-    printf "    ⎟    ↳ %s - not found\n" "$cmd"
-fi
-printf "    ⎟   \n"
-
-    # 5. PATH
-    printf "    ├─ \$PATH in order\n"
-    for ((i=4; i<${#res[@]}; i++)); do
-        IFS='|' read -r _ dir state target <<< "${res[i]}"
-        case "$state" in
-            notfound)
-                printf "    ⎟    ↳ %-24s %s - not found\n" "$dir" "$cmd"
-                ;;                
-            file)
-                if [[ -z $found_path ]]; then
-                    printf "    ⎟    ↳ %-24s ${CYAN}%s${RESET} - ${CYAN}found${RESET}\n" "$dir" "$cmd"
-                    found_path="$dir/$cmd"
-                    [[ -z $bash_winner_type ]] && path_winner=1
-                else
-                    printf "    ⎟    ↳ %-24s ${GREY}%s${RESET} - ${GREY}found [shadowed]${RESET}\n" "$dir" "$cmd"
-                fi
-                ;;
-            symlink)
-                if [[ -z $found_path ]]; then
-                    printf "    ⎟    ↳ %-24s ${CYAN}%s${RESET} - ${YELLOW}Symlink to [ %s ]${RESET}\n" \
-                        "$dir" "$cmd" "$target"
-                    found_path="$dir/$cmd"
-                    [[ -z $bash_winner_type ]] && path_winner=1
-                else
-                    printf "    ⎟    ↳ %-24s ${GREY}%s${RESET} - ${GREY}Symlink [shadowed]${RESET}\n" "$dir" "$cmd"
-                fi
-                ;;
-        esac
-    done
-    printf "    ⎟ \n"
-    
-    
-    # Determine if any PATH entry exists for this cmd
-local shadowed_file=0
-for ((i=4; i<${#res[@]}; i++)); do
-    IFS='|' read -r _ dir state target <<< "${res[i]}"
-    if [[ "$state" == "file" || "$state" == "symlink" ]]; then
-        shadowed_file=1
-        break
-    fi
-done
-    
-# Bash resolution target
-printf "    ├─ Bash resolution target:\n"
-if [[ -n $found_path ]]; then
-    local canonical
-    canonical=$(readlink -f -- "$found_path" 2>/dev/null || echo "$found_path")
-    case "$bash_winner_type" in
-        alias)
-            printf "    ⎟    ↳ Executed: ${CYAN}Alias: %s${RESET} (${CYAN}%s${RESET})\n" "$found_path" "$alias_def"
-            ;;
-        function)
-            printf "    ⎟    ↳ Executed: ${CYAN}Function: %s${RESET} (${CYAN}%s : line %s${RESET})\n" "$found_path" "$file" "$line"
-            ;;
-        builtin)
-            printf "    ⎟    ↳ Executed: ${CYAN}%s${RESET} (${CYAN}builtin${RESET})\n" "$found_path"
-            ;;
-        keyword)        
-            # Always print keyword line
-            printf "    ⎟    ↳ Keyword: ${CYAN}%s${RESET}\n" "$cmd"
-
-            # Print shadow notice if a filesystem executable exists
-            if (( shadowed_file )); then
-                printf "    ⎟    ↳ Note: filesystem executables named ${CYAN}%s${RESET} are unreachable by bare invocation\n" "$cmd"
-            fi
-            ;;
-        *)
-            if [[ "$found_path" != "$canonical" ]]; then
-                printf "    ⎟    ↳ Executed: ${CYAN}%s${RESET}  -  ${YELLOW}Symlink to [ %s ]${RESET}\n" "$found_path" "$canonical"
-            else
-                printf "    ⎟    ↳ Executed: ${CYAN}%s${RESET}\n" "$found_path"
-            fi
-            ;;
-    esac
-else
-    printf "    ⎟    ↳ Executed: not found\n"
-fi
-printf "    ⎟ \n"
-
-
-# Kernel execution
-if (( path_winner )); then
-
-    printf "    ├─ Kernel execution target:\n"
-
-    local canonical
-    canonical=$(readlink -f -- "$found_path" 2>/dev/null || echo "$found_path")
-    if [[ "$found_path" != "$canonical" ]]; then
-        printf "    ⎟    ↳ ${YELLOW}Symlink${RESET} → ${BPURP}%s${RESET}\n" "$canonical"
-    else
-        printf "    ⎟    ↳ Executable → %s\n" "$canonical"
-    fi
-
-    # ELF interpreter
-    if file "$canonical" 2>/dev/null | grep -q ELF; then
-        local interp
-        interp=$(readelf -l "$canonical" 2>/dev/null | awk '/interpreter/ {print $NF}')
-        [[ -n $interp ]] && printf "    ⎟    ↳ ELF interpreter: ${CYAN}%s${RESET}\n" "$interp"
-    fi
-
-    # Script shebang
-    if head -1 "$canonical" 2>/dev/null | grep -q '^#!'; then
-        printf "    ⎟    ↳ Shebang: ${CYAN}%s${RESET}\n" "$(head -1 "$canonical" | cut -c3-)"
-    fi
-fi
-printf "    ⎟ \n"
-   printf "    └──────────────────────────────────────────\n" 
-
-}
-
-#---------------------
-# Helper function: resolve command
-_h_resolve_command() {
-    local cmd="$1"
-    local -n out_refh="$2"
-    out_refh=()
-
-    local type_kind
-    type_kind=$(type -t "$cmd" 2>/dev/null)
-
-    # Alias
-    if [[ "$type_kind" == "alias" ]]; then
-        out_refh+=("alias|found|$(alias "$cmd")")
-    else
-        out_refh+=("alias|notfound")
-    fi
-
-    # Function
-if declare -F "$cmd" &>/dev/null; then
-    local line file was_extdebug=0
-    shopt -q extdebug || { shopt -s extdebug; was_extdebug=1; }
-    read -r _ line file <<< "$(declare -F "$cmd")"
-    (( was_extdebug )) && shopt -u extdebug
-    [[ -z $file ]] && file="interactive shell"
-    out_refh+=("function|found|$file|$line")
-else
-    out_refh+=("function|notfound")
-fi
-
-    # Builtin
-if compgen -b | grep -qx "$cmd"; then
-    out_refh+=("builtin|found")
-else
-    out_refh+=("builtin|notfound")
-fi
-
-# Keyword
-if compgen -k | grep -qx "$cmd"; then
-    out_refh+=("keyword|found")
-else
-    out_refh+=("keyword|notfound")
-fi
-
-    # PATH
-    IFS=: read -ra dirs <<< "$PATH"
-    for d in "${dirs[@]}"; do
-        local p="$d/$cmd"
-        if [[ -x "$p" ]]; then
-            if [[ -L "$p" ]]; then
-                out_refh+=("path|$d|symlink|$(readlink -f "$p")")
-            else
-                out_refh+=("path|$d|file")
-            fi
-        else
-            out_refh+=("path|$d|notfound")
-        fi
-    done
 }
 
 #------------------------------------------------------------------------

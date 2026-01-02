@@ -1,5 +1,13 @@
 # `bash_h` Changelog
 
+## V3.1.0
+- Major refactor
+- UI/UX improvements
+- Argument handling rewritten with graceful error paths
+- Detect scripts that support help flags and display help automatically fallback to source
+- Trace mode now recognizes and reports disabled builtins
+- Removed greeting banner
+
 ## V3.0.55
 - ui/ux stuff
 - testing on fedora - path manipulation bug fixed

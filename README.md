@@ -1,7 +1,7 @@
 # h — Bash Help Tool
 
 [![MIT License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![Version](https://img.shields.io/badge/version-3.0.55-blue)](https://github.com/JB63134/bash_h/releases)
+[![Version](https://img.shields.io/badge/version-3.1.0-blue)](https://github.com/JB63134/bash_h/releases)
 
 **h** is a full fledged command resolution engine that unifies help into one shortcut - **h**    
 It helps you understand what a command is, and shows available documentation.
@@ -17,7 +17,6 @@ For aliases, functions and scripts - handle displaying contents.
 ## Requirements 
 
 Bash ≥ V4.4 and GNU utils    
-Sourced file detection supports debian and fedora / rhel setups 
 
 ## Optional dependencies
 
@@ -40,7 +39,7 @@ Sourced file detection supports debian and fedora / rhel setups
 ### Help Output
 - Shows help from:
   - `help` for builtins/keywords
-  - `--help` / `-h` flags for external commands
+  - `--help` / `-h` flags for external commands 
   - alerts user of `man` or `info` pages if available
 
 ### Script/Function Preview
@@ -89,10 +88,10 @@ A quick method for Debian-based systems:
 
 ```bash
 # Download the latest release
-wget https://github.com/JB63134/bash_h/releases/latest/download/h_3.0.55.deb
+wget https://github.com/JB63134/bash_h/releases/latest/download/h_3.1.0.deb
 
 # Install using dpkg
-sudo dpkg -i h_3.0.55.deb
+sudo dpkg -i h_3.1.0.deb
 
 # Verify installation
 h -h
@@ -103,10 +102,10 @@ A quick method for RHEL-based systems:
 
 ```bash
 # Download the latest release
-wget https://github.com/JB63134/bash_h/releases/latest/download/bash_h-3.0.55-1.noarch.rpm
+wget https://github.com/JB63134/bash_h/releases/latest/download/bash_h-3.1.0-1.noarch.rpm
 
 # Install using dpkg
-sudo dnf install ./bash_h-3.0.55-1.noarch.rpm
+sudo dnf install ./bash_h-3.1.0-1.noarch.rpm
 
 # Verify installation
 h -h

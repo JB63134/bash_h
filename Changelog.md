@@ -1,5 +1,8 @@
 # `bash_h` Changelog
 
+## V3.1.1
+- trap for path restore fixed
+
 ## V3.1.0
 - Major refactor
 - UI/UX improvements

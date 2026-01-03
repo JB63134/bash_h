@@ -3,7 +3,7 @@
 # Main Function: h
 # Purpose: bash help tool
 #========================================================================
-__H_version="3.1.0"
+__H_version="3.1.1"
 __H_extglob_was=0
 __H_RHEL_like=0
 __H_OLD_PATH="$PATH"
@@ -24,14 +24,13 @@ h() {
         *) return;;
     esac
     
-    trap '_h_restore_path' RETURN
-    trap '_h_reset_extglob' RETURN
+    trap '_h_restore_path; _h_reset_extglob' RETURN
    
     local cmd ctype
     
     _h_detect_os
-    _h_enable_extglob
     _h_add_admin_paths # Setup PATH
+    _h_enable_extglob
     _h_setup_colors # Setup tput or ansi
     _h_check_dependencies __H_needed_deps __H_optional_deps 1  # 1 = exit if required deps missing
 
@@ -527,7 +526,7 @@ _h_is_help_output() {
 #------------------------------------------------------------------------
 _h_add_admin_paths() {
     # Save PATH if not already saved 
-    if [[ -z "$OLD_PATH" ]]; then
+    if [[ -z "$__H_OLD_PATH" ]]; then
         __H_OLD_PATH="$PATH"
     fi
 
@@ -769,7 +768,15 @@ _h_print_trace() {
     local alias_def="" file line canonical interp ctype
     local shadowed_file=0
     state=""
+    
+        ctype=$(type -t -- "$cmd" 2>/dev/null)
+    if [[ -z "$ctype" ]]; then
+        printf "├─ ${RED}Unknown or invalid command: ${CYAN}%s${RESET}\n" "$cmd"
+        printf "    ↳ Check your spelling and try again\n\n"  
+        return 1
+    fi
     _h_resolve_command "$cmd" res
+    
     printf "├─ Command Resolution Trace of ${CYAN}%s${RESET}\n" "$cmd"
     printf "    ⎟ \n"
     # 1. Alias
@@ -940,6 +947,7 @@ _h_print_trace() {
     fi
     printf "    ⎟ \n"
     printf "    └──────────────────────────────────────────\n\n" 
+    
 }
 
 #---------------------

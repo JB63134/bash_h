@@ -88,10 +88,10 @@ A quick method for Debian-based systems:
 
 ```bash
 # Download the latest release
-wget https://github.com/JB63134/bash_h/releases/latest/download/h_3.1.0.deb
+wget https://github.com/JB63134/bash_h/releases/latest/download/h_3.1.1.deb
 
 # Install using dpkg
-sudo dpkg -i h_3.1.0.deb
+sudo dpkg -i h_3.1.1.deb
 
 # Verify installation
 h -h
@@ -102,10 +102,10 @@ A quick method for RHEL-based systems:
 
 ```bash
 # Download the latest release
-wget https://github.com/JB63134/bash_h/releases/latest/download/bash_h-3.1.0-1.noarch.rpm
+wget https://github.com/JB63134/bash_h/releases/latest/download/bash_h-3.1.1-1.noarch.rpm
 
 # Install using dpkg
-sudo dnf install ./bash_h-3.1.0-1.noarch.rpm
+sudo dnf install ./bash_h-3.1.1-1.noarch.rpm
 
 # Verify installation
 h -h

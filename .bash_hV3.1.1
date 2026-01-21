@@ -3,7 +3,7 @@
 # Main Function: h
 # Purpose: bash help tool
 #========================================================================
-__H_version="3.2.0"
+__H_version="3.1.1"
 __H_extglob_was=0
 __H_RHEL_like=0
 __H_OLD_PATH="$PATH"
@@ -53,6 +53,12 @@ h() {
     case "$cmd" in
         -h|--help) _h_usage; return 0;;
         -v|--version) _h_ver; return 0;;
+        -t|--trace) 
+            shift
+            [[ -z $1 ]] && { printf "trace requires an argument\n" >&2; return 1; }
+            _h_print_trace "$1"
+            return 0
+            ;;
         -f|--fzf) _h_fzf_search; return 0;;  # alias hf='command -v fzf >/dev/null 2>&1 && h --fzf || h'
     esac
     
@@ -345,11 +351,13 @@ _h_usage() {
      Options:
           -h --help or h      Show this help text.
           -v --version        Show version information.
+          -t --trace          Command resolution order mapping 
           -f --fzf            Use fzf to interactivly search commands
      
      Examples:
           h                   # Get help for your most recent command
           h awk               # Get help for 'awk'
+          h -t awk            # Which awk runs and why that one?
 
 EOF
 }
@@ -744,6 +752,282 @@ _h_expand_path() {
     p="${p//$'\n'/}"
     p="${p%%*( )}"
     printf '%s' "$p"
+}
+
+#------------------------------------------------------------------------
+# Function: _h_print_trace
+# Purpose: Command Resolution Trace (aliases, functions, builtins, PATH)
+#------------------------------------------------------------------------
+_h_print_trace() {
+    local cmd="$1"
+    local path_winner=0
+    local bash_winner_type=""
+    local -a res state rc
+    local winner=""
+    local found_path=""
+    local alias_def="" file line canonical interp ctype
+    local shadowed_file=0
+    state=""
+    
+        ctype=$(type -t -- "$cmd" 2>/dev/null)
+    if [[ -z "$ctype" ]]; then
+        printf "├─ ${RED}Unknown or invalid command: ${CYAN}%s${RESET}\n" "$cmd"
+        printf "    ↳ Check your spelling and try again\n\n"  
+        return 1
+    fi
+    _h_resolve_command "$cmd" res
+    
+    printf "├─ Command Resolution Trace of ${CYAN}%s${RESET}\n" "$cmd"
+    printf "    ⎟ \n"
+    # 1. Alias
+    if [[ ${res[0]} == alias\|found* ]]; then
+        alias_def="${res[0]#*|found|}"       
+        printf "    ├─ Alias:  -  ${CYAN}found  %s → %s${RESET}\n" "$cmd" "$alias_def"
+        winner="alias"
+        bash_winner_type="alias"
+        found_path="$cmd"
+    else
+        printf "    ├─ Alias:  -  not found\n" 
+    fi
+    
+    # 2. function
+    if [[ ${res[1]} == function\|found* ]]; then
+        IFS='|' read -r _ _ file line <<< "${res[1]}"
+        if [[ -z $winner ]]; then
+            winner="function"
+            bash_winner_type="function"   
+            found_path="$cmd"
+            printf "    ├─ Function:  -  ${CYAN}found %s → (%s : line %s)${RESET}\n" "$cmd" "$file" "$line"  
+        else
+            printf "    ├─ Function:  -  ${GREY}found %s → (%s : line %s) [shadowed]${RESET}\n" "$cmd" "$file" "$line"
+        fi
+    else
+        printf "    ├─ Function:  -  not found\n" 
+    fi
+    
+    # 3. Builtin
+    if [[ ${res[2]} == builtin\|found ]]; then
+    
+        _h_is_builtin_disabled "$cmd"
+        rc=$?
+        [[ $rc -eq 0 ]] && state2=disabled
+        [[ $rc -eq 1 ]] && state2=enabled
+        
+        if [[ -z $winner ]]; then
+            printf "    ├─ Builtin:  -  ${CYAN}%s → %s${RESET}\n" "$cmd" "$state2"
+            winner="builtin"
+            bash_winner_type="builtin"
+            [[ -z $found_path ]] && found_path="$cmd"
+        else
+            # builtin shadowed by alias or function
+            printf "    ├─ Builtin:  -  ${GREY}%s → %s [shadowed]${RESET}\n" "$cmd" "$state2"
+        fi
+    else
+        printf "    ├─ Builtin:  -  not found\n" 
+    fi
+    
+    # 4. Keyword
+    if [[ ${res[3]} == keyword\|found ]]; then
+        if [[ -z $winner ]]; then
+            printf "    ├─ Keyword:  -  ${CYAN}%s → found${RESET}\n" "$cmd"
+            winner="keyword"
+            bash_winner_type="keyword"
+            [[ -z $found_path ]] && found_path="$cmd"
+        else
+            printf "    ├─ Keyword:  -  ${GREY}%s → found [shadowed]${RESET}\n" "$cmd"
+        fi
+    else
+        printf "    ├─ Keyword:  -  not found\n" 
+    fi
+    printf "    ⎟ \n"
+    # 5. PATH
+    printf "    ├─ \$PATH in order:\n"
+    for ((i=4; i<${#res[@]}; i++)); do
+        IFS='|' read -r _ dir state target <<< "${res[i]}"
+        case "$state" in
+            notfound)
+                printf "    ⎟    ↳ %-24s - not found\n" "$dir"
+                ;;                
+            file)
+                if [[ -z $found_path ]]; then
+                    printf "    ⎟    ↳ %-24s - ${CYAN}%s${RESET} - ${CYAN}found${RESET}\n" "$dir" "$cmd"
+                    found_path="$dir/$cmd"
+                    [[ -z $bash_winner_type ]] && path_winner=1
+                else
+                    printf "    ⎟    ↳ %-24s - ${GREY}%s${RESET} - ${GREY}found [shadowed]${RESET}\n" "$dir" "$cmd"
+                fi
+                ;;
+            symlink)
+                if [[ -z $found_path ]]; then
+                    printf "    ⎟    ↳ %-24s - ${CYAN}%s${RESET} - ${YELLOW}Symlink to [ %s ]${RESET}\n" \
+                        "$dir" "$cmd" "$target"
+                    found_path="$dir/$cmd"
+                    [[ -z $bash_winner_type ]] && path_winner=1
+                else
+                    printf "    ⎟    ↳ %-24s - ${GREY}%s${RESET} - ${GREY}Symlink [shadowed]${RESET}\n" "$dir" "$cmd"
+                fi
+                ;;
+        esac
+    done
+    printf "    ⎟ \n"
+    
+    
+    # Determine if any PATH entry exists for this cmd
+    for ((i=4; i<${#res[@]}; i++)); do
+        IFS='|' read -r _ dir state target <<< "${res[i]}"
+        if [[ "$state" == "file" || "$state" == "symlink" ]]; then
+            shadowed_file=1
+            break
+        fi
+    done
+    
+    # Bash resolution target
+    printf "    ├─ Bash Resolution Target:\n"
+    if [[ -n $found_path ]]; then
+        canonical=$(readlink -f -- "$found_path" 2>/dev/null || echo "$found_path")      
+        case "$bash_winner_type" in
+            alias)
+                printf "    ⎟    ↳ Executed: ${CYAN}%s${RESET}\n" "$alias_def"
+                ;;
+            function)
+                printf "    ⎟    ↳ Executed: ${CYAN}Function  %s → (%s : line %s)${RESET}\n" "$found_path" "$file" "$line"
+                ;;
+            builtin)
+                if [[ "$state2" == "enabled" ]]; then
+                    printf "    ⎟    ↳ Executed: ${CYAN}Builtin %s → %s ${RESET}\n" "$found_path" "$state2"
+                else
+                    printf "    ⎟    ↳ Executed: ${RED}Builtin %s is %s → Nothing Executed${RESET}\n" "$found_path" "$state2"   
+                fi     
+                ;;
+            keyword)        
+                # Always print keyword line
+                printf "    ⎟    ↳ Resolved Keyword: ${CYAN}%s${RESET}\n" "$cmd"
+
+                if (( shadowed_file )); then
+                    printf "    ⎟    ↳ Note: filesystem executables named ${CYAN}%s${RESET} are unreachable by bare invocation\n" "$cmd"
+                fi
+                ;;
+            *)
+                if [[ "$found_path" != "$canonical" ]]; then
+                    printf "    ⎟    ↳ Executed: ${CYAN}%s${RESET} - ${YELLOW}Symlink to [ %s ]${RESET}\n" "$found_path" "$canonical"
+                else
+                    printf "    ⎟    ↳ Executed: ${CYAN}%s${RESET}\n" "$found_path"
+                fi
+                ;;
+        esac
+    else
+        printf "    ⎟    ↳ Executed: not found\n"
+    fi
+    
+    printf "    ⎟ \n"
+    printf "    ├─ Kernel Execution Target:\n"
+    
+    # Kernel execution
+    if (( path_winner )); then
+        canonical=$(readlink -f -- "$found_path" 2>/dev/null || echo "$found_path")
+        interp=$(readelf -l "$canonical" 2>/dev/null | awk '/interpreter/ {gsub(/[][]/, "", $NF); print $NF}')
+        
+        if [[ "$found_path" != "$canonical" ]]; then
+            printf "    ⎟    ↳ ${YELLOW}Symlink${RESET} → ${BPURP}%s${RESET}\n" "$canonical"
+        else
+            printf "    ⎟    ↳ Executable → %s\n" "$canonical"
+        fi
+
+        # ELF interpreter
+        if file "$canonical" 2>/dev/null | grep -q ELF; then
+            [[ -n $interp ]] && printf "    ⎟    ↳ ELF interpreter: ${CYAN}%s${RESET}\n" "$interp"
+        fi
+
+        # Script shebang
+        if head -1 "$canonical" 2>/dev/null | grep -q '^#!'; then
+            printf "    ⎟    ↳ Shebang: ${CYAN}%s${RESET}\n" "$(head -1 "$canonical" | cut -c3-)"
+        fi
+    else
+        printf "    ⎟    ↳ NONE \n"  
+    fi
+    printf "    ⎟ \n"
+    printf "    └──────────────────────────────────────────\n\n" 
+    
+}
+
+#---------------------
+# Helper function: _h_resolve_command
+_h_resolve_command() {
+    local cmd="$1"
+    local -n out_refh="$2"
+    local type_kind line file
+    local was_extdebug=0        
+    out_refh=()
+    type_kind=$(type -t "$cmd" 2>/dev/null)
+
+    # Alias
+    if [[ "$type_kind" == "alias" ]]; then
+        out_refh+=("alias|found|$(alias "$cmd")")
+    else
+        out_refh+=("alias|notfound")
+    fi
+
+    # Function
+    if declare -F "$cmd" &>/dev/null; then
+        shopt -q extdebug || { shopt -s extdebug; was_extdebug=1; }
+        read -r _ line file <<< "$(declare -F "$cmd")"
+        (( was_extdebug )) && shopt -u extdebug
+        [[ -z $file ]] && file="interactive shell"
+        out_refh+=("function|found|$file|$line")
+    else
+        out_refh+=("function|notfound")
+    fi
+
+    # Builtin
+    if compgen -b | grep -qx "$cmd"; then
+        out_refh+=("builtin|found")
+    else
+        out_refh+=("builtin|notfound")
+    fi
+
+    # Keyword
+    if compgen -k | grep -qx "$cmd"; then
+        out_refh+=("keyword|found")
+    else
+        out_refh+=("keyword|notfound")
+    fi
+
+    # PATH
+    IFS=: read -ra dirs <<< "$PATH"
+    for d in "${dirs[@]}"; do
+        local p="$d/$cmd"
+        if [[ -x "$p" ]]; then
+            if [[ -L "$p" ]]; then
+                out_refh+=("path|$d|symlink|$(readlink -f "$p")")
+            else
+                out_refh+=("path|$d|file")
+            fi
+        else
+            out_refh+=("path|$d|notfound")
+        fi
+    done
+}
+
+#---------------------
+# Helper function: _h_is_builtin_disabled
+_h_is_builtin_disabled() {
+    local name=$1
+    local check
+
+    # Check if builtin is disabled
+    check=$(enable -a | awk -v n="$name" '$1=="enable" && $2=="-n" && $3==n { print $3 }')
+    if [[ "$check" == "$name" ]]; then
+        return 0  # 0 means disabled
+    fi
+
+    # Check if builtin exists and is enabled
+    check=$(enable -a | awk -v n="$name" '$1=="enable" && $2==n { print $2 }')
+    if [[ "$check" == "$name" ]]; then
+        return 1  # 1 means enabled
+    fi
+
+    # Not found
+    return 2
 }
 
 #------------------------------------------------------------------------

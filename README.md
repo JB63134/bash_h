@@ -44,16 +44,8 @@ Bash ≥ V4.4 and GNU utils
 - Resolves aliases  
 - Shows where aliases are defined (interactive shell or sourced file)
 
-### Command Resolution Trace
-- `h --trace sed` shows the order Bash would resolve a command  
-- Highlights shadowing (e.g., alias overriding a builtin)
-
 ### Interactive Command Selection
 - If `fzf` is installed, `h -f` lets users pick a command interactively
-
-### Command Resolution Trace
-- `_h_print_trace` shows the order Bash would resolve a command  
-- Highlights shadowing (e.g., alias overriding a builtin)
 
 ---
 
@@ -123,7 +115,6 @@ h -v                # Show version info
 | `-h`, `--help`       | Show help text                                                     |
 | `-v`, `--version`    | Show version information                                           |
 | `-f`, `--fzf`        | Interactively search for commands (requires `fzf`)                 |
-| `-t`, `--trace`      | Show detailed trace of command resolution including shadowing      |
 
 ---
 
@@ -134,7 +125,6 @@ h -v                # Show version info
 ![Functions](images/function.png)
 ![Builtins and Keywords](images/builtin-keyword.png)
 ![Script](images/script.png)
-![trace](images/trace.png)
 
 --------------------------------------------------------------------------------------------
 

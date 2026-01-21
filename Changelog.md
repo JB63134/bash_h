@@ -1,5 +1,8 @@
 # `bash_h` Changelog
 
+## V3.2.0
+- command resolution trace removed and released as a standalone script.
+
 ## V3.1.1
 - trap for path restore fixed
 
